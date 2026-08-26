@@ -47,6 +47,7 @@ export const LoanApi = {
   byCustomer: (customerId) => api.get(`/loans/customer/${customerId}`),
   summary: (id) => api.get(`/loans/${id}/summary`),
   updateStatus: (id, status) => api.put(`/loans/${id}/status`, { status }),
+  pay: (id, account_id, payment_amount) => api.post(`/loans/${id}/payments`, { account_id, payment_amount }),
   remove: (id) => api.del(`/loans/${id}`),
 };
 

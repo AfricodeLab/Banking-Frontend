@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar.jsx';
 import { TopBar } from './TopBar.jsx';
 import { CommandBar } from './CommandBar.jsx';
+import { BreadcrumbProvider, Breadcrumbs } from './Breadcrumbs.jsx';
 
 export function AppShell() {
   const [collapsed, setCollapsed] = useState(false);
@@ -24,7 +25,10 @@ export function AppShell() {
         <TopBar onOpenCommand={() => setCmdOpen(true)} />
         <main className="flex-1 overflow-y-auto scroll-thin">
           <div className="mx-auto max-w-[1400px] px-5 py-6">
-            <Outlet />
+            <BreadcrumbProvider>
+              <Breadcrumbs />
+              <Outlet />
+            </BreadcrumbProvider>
           </div>
         </main>
       </div>
