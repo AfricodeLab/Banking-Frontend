@@ -5,7 +5,8 @@ import { api } from './client.js';
 export const AuthApi = {
   login: (username, password) => api.post('/auth/login', { username, password }, { auth: false }),
   register: (payload) => api.post('/auth/register', payload, { auth: false }),
-  validate: (token) => api.post('/auth/validate', { token }, { auth: false }),
+  // Backend reads the bearer token from the Authorization header (attached by auth:true).
+  validate: () => api.post('/auth/validate', undefined, { auth: true }),
 };
 
 export const CustomerApi = {

@@ -13,6 +13,7 @@ import {
 } from '../../components/ui/index.js';
 import { RotateCcw } from 'lucide-react';
 import { formatMoney, formatDateTime, formatDate } from '../../lib/format.js';
+import { Can } from '../../lib/auth/Can.jsx';
 import { cn } from '../../lib/cn.js';
 
 const TYPE_ICON = { deposit: ArrowDownLeft, withdrawal: ArrowUpRight, transfer: ArrowLeftRight };
@@ -170,8 +171,9 @@ function TransactionDetailModal({ txn, onClose, onReversed }) {
           )}
         </div>
 
-        {/* Reversal */}
+        {/* Reversal — only shown to users who may cancel/adjust transactions */}
         {canReverse ? (
+          <Can permission="cancel_transaction">
           <div className="border-t border-slate-100 pt-4">
             <div className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2"><RotateCcw size={15} className="text-slate-400" /> Reverse / adjust</div>
             <div className="flex items-end gap-2">
@@ -182,6 +184,7 @@ function TransactionDetailModal({ txn, onClose, onReversed }) {
             </div>
             <p className="text-2xs text-slate-400 mt-1.5">Posts a contra entry and marks this transaction as reversed. Recorded in the audit trail.</p>
           </div>
+          </Can>
         ) : String(txn.status).toLowerCase() === 'reversed' ? (
           <div className="border-t border-slate-100 pt-4 text-sm text-slate-500">This transaction has been reversed.</div>
         ) : null}

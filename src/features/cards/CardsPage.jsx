@@ -4,6 +4,7 @@ import { CardApi, AccountApi, CustomerApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
 import { loadAllAccounts, asList } from '../accounts/accountsData.js';
 import { PageHeader, Card, Button, Input, StatCard, Badge, StatusPill, Modal, Field, Select, EmptyState, Spinner, useToast, useConfirm, SearchInput, ResultCount } from '../../components/ui/index.js';
+import { PermissionButton } from '../../lib/auth/Can.jsx';
 import { formatMoney, maskCard, formatDate } from '../../lib/format.js';
 import { cn } from '../../lib/cn.js';
 
@@ -60,7 +61,7 @@ export function CardsPage() {
   return (
     <div>
       <PageHeader title="Cards" description="Debit & credit card issuance and lifecycle"
-        actions={<Button icon={Plus} onClick={() => setOpen(true)}>Issue card</Button>} />
+        actions={<PermissionButton permission="create_account" icon={Plus} onClick={() => setOpen(true)}>Issue card</PermissionButton>} />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
         <StatCard label="Total cards" value={loading ? '—' : cards.length} icon={CreditCard} accent="brand" />

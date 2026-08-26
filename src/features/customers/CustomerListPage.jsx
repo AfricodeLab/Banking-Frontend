@@ -4,6 +4,7 @@ import { Plus, Download, Users } from 'lucide-react';
 import { CustomerApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
 import { PageHeader, Card, DataTable, StatusPill, Button, Toolbar, ToolbarRow, ToolbarSpacer, SearchInput, ResultCount } from '../../components/ui/index.js';
+import { PermissionButton } from '../../lib/auth/Can.jsx';
 import { formatDate, initials } from '../../lib/format.js';
 
 const asList = (r) => (Array.isArray(r) ? r : r?.data || []);
@@ -49,7 +50,7 @@ export function CustomerListPage() {
         actions={
           <>
             <Button variant="secondary" icon={Download}>Export</Button>
-            <Button icon={Plus} onClick={() => navigate('/customers/new')}>New customer</Button>
+            <PermissionButton permission="create_customer" icon={Plus} onClick={() => navigate('/customers/new')}>New customer</PermissionButton>
           </>
         }
       />

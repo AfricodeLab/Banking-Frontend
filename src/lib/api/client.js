@@ -6,10 +6,10 @@
  */
 
 // Backend base URL. Override at build/run time with API_BASE_URL; defaults to the
-// local core-banking server. (Runs on :8090 — :8080 hosts the legacy instance.)
+// local core-banking server on :8080.
 export const API_BASE_URL =
   (typeof process !== 'undefined' && process.env && process.env.API_BASE_URL) ||
-  'http://localhost:8090';
+  'http://localhost:8080';
 
 const TOKEN_KEY = 'nb.token';
 
@@ -65,7 +65,12 @@ async function request(method, path, { body, params, auth = true, signal } = {})
   if (text) { try { data = JSON.parse(text); } catch { data = text; } }
 
   if (!res.ok) {
-    const msg = (data && data.error) || (typeof data === 'string' && data) || `Request failed (${res.status})`;
+    let msg = (data && data.error) || (typeof data === 'string' && data) || `Request failed (${res.status})`;
+    // Friendlier, consistent messaging for authorization failures.
+    if (res.status === 403) msg = "You don't have permission to perform this action.";
+    // A 401 on an authenticated request means the token lapsed. On the login call
+    // (auth:false) keep the server's message (e.g. "invalid credentials").
+    else if (res.status === 401 && auth) msg = 'Your session has expired. Please sign in again.';
     throw new ApiError(msg, res.status, data);
   }
   return data;

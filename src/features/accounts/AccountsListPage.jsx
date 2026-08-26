@@ -6,6 +6,7 @@ import { loadAllAccounts } from './accountsData.js';
 import { PageHeader, Card, DataTable, StatusPill, Badge, Button, StatCard, Toolbar, ToolbarRow, ToolbarSpacer, SearchInput, ResultCount } from '../../components/ui/index.js';
 import { formatMoney } from '../../lib/format.js';
 import { OpenAccountModal } from './OpenAccountModal.jsx';
+import { PermissionButton } from '../../lib/auth/Can.jsx';
 
 export function AccountsListPage() {
   const navigate = useNavigate();
@@ -41,7 +42,7 @@ export function AccountsListPage() {
       <PageHeader
         title="CASA Accounts"
         description="Current & savings account portfolio"
-        actions={<Button icon={Plus} onClick={() => setOpen(true)}>Open account</Button>}
+        actions={<PermissionButton permission="create_account" icon={Plus} onClick={() => setOpen(true)}>Open account</PermissionButton>}
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
