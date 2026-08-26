@@ -34,6 +34,7 @@ export const TransactionApi = {
   get: (id) => api.get(`/transactions/${id}`),
   process: (id) => api.put(`/transactions/${id}/process`, {}),
   cancel: (id) => api.put(`/transactions/${id}/cancel`, {}),
+  reverse: (id, reason) => api.put(`/transactions/${id}/reverse`, { reason }),
   logs: (id) => api.get(`/transactions/${id}/logs`),
   byAccount: (accountId, params) => api.get(`/transactions/account/${accountId}`, { params }),
   history: (params) => api.get('/transactions/history', { params }),
@@ -57,6 +58,14 @@ export const BeneficiaryApi = {
   get: (id) => api.get(`/beneficiaries/${id}`),
   create: (payload) => api.post('/beneficiaries', payload),
   remove: (id) => api.del(`/beneficiaries/${id}`),
+};
+
+export const StandingOrderApi = {
+  list: (accountId) => api.get('/standing-orders', { params: accountId ? { account_id: accountId } : {} }),
+  create: (payload) => api.post('/standing-orders', payload),
+  pause: (id) => api.put(`/standing-orders/${id}/pause`, {}),
+  resume: (id) => api.put(`/standing-orders/${id}/resume`, {}),
+  cancel: (id) => api.del(`/standing-orders/${id}`),
 };
 
 export const BranchApi = {

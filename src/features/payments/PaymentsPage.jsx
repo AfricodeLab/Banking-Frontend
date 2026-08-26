@@ -2,13 +2,13 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeftRight, Send, UserPlus, Trash2, User, Building2, CheckCircle2,
-  ArrowUpRight, Users, Wallet,
+  ArrowUpRight, Users, Wallet, Repeat,
 } from 'lucide-react';
-import { TransactionApi, BeneficiaryApi } from '../../lib/api/index.js';
+import { TransactionApi, BeneficiaryApi, StandingOrderApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
 import { loadAllAccounts, asList } from '../accounts/accountsData.js';
-import { PageHeader, Card, CardHeader, Field, Select, Input, Button, Badge, StatusPill, Modal, EmptyState, useToast, useConfirm } from '../../components/ui/index.js';
-import { formatMoney, formatDateTime, initials, maskCard } from '../../lib/format.js';
+import { PageHeader, Card, CardHeader, Field, Select, Input, Button, Badge, StatusPill, Modal, EmptyState, DataTable, useToast, useConfirm } from '../../components/ui/index.js';
+import { formatMoney, formatDateTime, formatDate, initials, maskCard } from '../../lib/format.js';
 import { cn } from '../../lib/cn.js';
 
 export function PaymentsPage() {
@@ -200,8 +200,85 @@ export function PaymentsPage() {
         </div>
       </div>
 
+      <div className="mt-4">
+        <StandingOrdersCard accounts={accounts} acctById={acctById} />
+      </div>
+
       <AddBeneficiaryModal open={addOpen} onClose={() => setAddOpen(false)} ownerId={ownerId} accounts={accounts} excludeId={fromId} onAdded={() => beneficiaries.reload()} />
     </div>
+  );
+}
+
+function StandingOrdersCard({ accounts, acctById }) {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const orders = useAsync(() => StandingOrderApi.list().then(asList), []);
+  const [form, setForm] = useState({ from_account_id: '', to_account_id: '', amount: '', frequency: 'monthly', reference: '', start_date: new Date().toISOString().slice(0, 10) });
+  const [busy, setBusy] = useState(false);
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const list = orders.data || [];
+
+  const create = async () => {
+    if (!form.from_account_id || !form.to_account_id) return toast.error('Select both accounts');
+    if (form.from_account_id === form.to_account_id) return toast.error('Accounts must differ');
+    const amt = parseFloat(form.amount);
+    if (!amt || amt <= 0) return toast.error('Enter a valid amount');
+    setBusy(true);
+    try {
+      await StandingOrderApi.create({ ...form, amount: amt, currency: acctById[form.from_account_id]?.currency || 'GHS' });
+      toast.success('Standing order created');
+      setForm((f) => ({ ...f, amount: '', reference: '' }));
+      orders.reload();
+    } catch (err) { toast.error(err?.message || 'Could not create'); }
+    finally { setBusy(false); }
+  };
+
+  const toggle = async (o) => {
+    try { await (o.status === 'paused' ? StandingOrderApi.resume(o.order_id) : StandingOrderApi.pause(o.order_id)); orders.reload(); }
+    catch (err) { toast.error(err?.message || 'Could not update'); }
+  };
+  const cancel = async (o) => {
+    const ok = await confirm({ title: 'Cancel standing order?', message: `Stop the recurring ${o.frequency} transfer of ${formatMoney(o.amount, o.currency)}?`, confirmLabel: 'Cancel order', tone: 'danger' });
+    if (!ok) return;
+    try { await StandingOrderApi.cancel(o.order_id); toast.success('Standing order cancelled'); orders.reload(); }
+    catch (err) { toast.error(err?.message || 'Could not cancel'); }
+  };
+
+  const name = (id) => acctById[id]?.customer_name || (id || '').slice(0, 10);
+
+  return (
+    <Card>
+      <CardHeader title="Standing orders" icon={Repeat} subtitle="Recurring transfers executed automatically" />
+      <div className="p-4 grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto_auto_1fr_auto] items-end gap-3 border-b border-slate-100">
+        <Field label="From"><Select value={form.from_account_id} onChange={set('from_account_id')}><option value="">Account…</option>{accounts.map((a) => <option key={a.account_id} value={a.account_id}>{a.customer_name} · {a.currency}</option>)}</Select></Field>
+        <Field label="To"><Select value={form.to_account_id} onChange={set('to_account_id')}><option value="">Account…</option>{accounts.map((a) => <option key={a.account_id} value={a.account_id}>{a.customer_name} · {a.currency}</option>)}</Select></Field>
+        <Field label="Amount"><Input value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value.replace(/[^0-9.]/g, '') }))} mono className="w-28" placeholder="0.00" /></Field>
+        <Field label="Frequency"><Select value={form.frequency} onChange={set('frequency')} className="w-28"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></Select></Field>
+        <Field label="Reference"><Input value={form.reference} onChange={set('reference')} placeholder="e.g. Rent" /></Field>
+        <Button icon={Repeat} loading={busy} onClick={create}>Create</Button>
+      </div>
+      <DataTable
+        columns={[
+          { key: 'route', header: 'From → To', render: (o) => <span className="text-slate-700">{name(o.from_account_id)} <span className="text-slate-400">→</span> {name(o.to_account_id)}</span> },
+          { key: 'amount', header: 'Amount', align: 'right', className: 'num font-medium text-slate-800', render: (o) => formatMoney(o.amount, o.currency) },
+          { key: 'frequency', header: 'Frequency', render: (o) => <Badge tone="neutral">{o.frequency}</Badge> },
+          { key: 'next_run', header: 'Next run', render: (o) => <span className="text-slate-500 text-xs">{o.status === 'active' ? formatDate(o.next_run) : '—'}</span> },
+          { key: 'run_count', header: 'Runs', align: 'right', className: 'num text-slate-500', render: (o) => o.run_count },
+          { key: 'status', header: 'Status', render: (o) => <StatusPill status={o.status} /> },
+          {
+            key: 'actions', header: '', align: 'right',
+            render: (o) => o.status === 'cancelled' ? null : (
+              <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                <Button size="xs" variant="ghost" onClick={() => toggle(o)}>{o.status === 'paused' ? 'Resume' : 'Pause'}</Button>
+                <Button size="xs" variant="ghost" onClick={() => cancel(o)}>Cancel</Button>
+              </div>
+            ),
+          },
+        ]}
+        rows={orders.loading ? null : list} loading={orders.loading} rowKey={(o) => o.order_id} pageSize={6}
+        empty={{ icon: Repeat, title: 'No standing orders', description: 'Set up a recurring transfer above.' }}
+      />
+    </Card>
   );
 }
 

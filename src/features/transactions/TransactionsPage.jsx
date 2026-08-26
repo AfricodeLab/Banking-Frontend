@@ -7,7 +7,8 @@ import { TransactionApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
 import { loadAllTransactions, partyLabel } from './transactionsData.js';
 import { asList } from '../accounts/accountsData.js';
-import { PageHeader, Card, DataTable, StatusPill, Button, Input, Select, StatCard, Modal, Spinner } from '../../components/ui/index.js';
+import { PageHeader, Card, DataTable, StatusPill, Button, Input, Select, StatCard, Modal, Spinner, Field, useToast, useConfirm } from '../../components/ui/index.js';
+import { RotateCcw } from 'lucide-react';
 import { formatMoney, formatDateTime, formatDate } from '../../lib/format.js';
 import { cn } from '../../lib/cn.js';
 
@@ -16,7 +17,7 @@ const TYPE_TONE = { deposit: 'bg-success-50 text-success-600', withdrawal: 'bg-d
 const TYPES = ['all', 'deposit', 'withdrawal', 'transfer'];
 
 export function TransactionsPage() {
-  const { data, loading, error } = useAsync(() => loadAllTransactions(), []);
+  const { data, loading, error, reload } = useAsync(() => loadAllTransactions(), []);
   const stats = useAsync(() => TransactionApi.stats().catch(() => null), []);
   const [type, setType] = useState('all');
   const [status, setStatus] = useState('all');
@@ -99,15 +100,37 @@ export function TransactionsPage() {
           empty={{ icon: Receipt, title: 'No transactions', description: 'Adjust filters or post transactions from the Teller.' }} />
       </Card>
 
-      <TransactionDetailModal txn={selected} onClose={() => setSelected(null)} />
+      <TransactionDetailModal txn={selected} onClose={() => setSelected(null)} onReversed={() => { setSelected(null); reload(); }} />
     </div>
   );
 }
 
-function TransactionDetailModal({ txn, onClose }) {
+function TransactionDetailModal({ txn, onClose, onReversed }) {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
   const logs = useAsync(() => (txn ? TransactionApi.logs(txn.transaction_id).then(asList).catch(() => []) : Promise.resolve([])), [txn?.transaction_id]);
   if (!txn) return null;
   const Icon = TYPE_ICON[txn.transaction_type] || Receipt;
+  const canReverse = String(txn.status).toLowerCase() === 'completed';
+
+  const doReverse = async () => {
+    const ok = await confirm({
+      title: 'Reverse transaction?',
+      message: `Post a contra entry that undoes ${formatMoney(txn.amount, txn.currency)} (${txn.transaction_type}) and marks the original as reversed. This cannot be undone.`,
+      confirmLabel: 'Reverse',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await TransactionApi.reverse(txn.transaction_id, reason || 'correction');
+      toast.success('Transaction reversed');
+      onReversed?.();
+    } catch (err) { toast.error(err?.message || 'Reversal failed'); }
+    finally { setBusy(false); }
+  };
 
   return (
     <Modal open={!!txn} onClose={onClose} title="Transaction detail" subtitle={txn.reference_number} size="lg">
@@ -151,6 +174,22 @@ function TransactionDetailModal({ txn, onClose }) {
             </ul>
           )}
         </div>
+
+        {/* Reversal */}
+        {canReverse ? (
+          <div className="border-t border-slate-100 pt-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2"><RotateCcw size={15} className="text-slate-400" /> Reverse / adjust</div>
+            <div className="flex items-end gap-2">
+              <Field label="Reason" className="flex-1">
+                <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. duplicate posting, error correction" />
+              </Field>
+              <Button variant="danger" icon={RotateCcw} loading={busy} onClick={doReverse}>Reverse</Button>
+            </div>
+            <p className="text-2xs text-slate-400 mt-1.5">Posts a contra entry and marks this transaction as reversed. Recorded in the audit trail.</p>
+          </div>
+        ) : String(txn.status).toLowerCase() === 'reversed' ? (
+          <div className="border-t border-slate-100 pt-4 text-sm text-slate-500">This transaction has been reversed.</div>
+        ) : null}
       </div>
     </Modal>
   );
