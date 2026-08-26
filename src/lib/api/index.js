@@ -86,6 +86,22 @@ export const CardApi = {
 
 export const RoleApi = {
   list: () => api.get('/roles'),
+  get: (id) => api.get(`/roles/${id}`),
+  create: (payload) => api.post('/roles', payload), // { role_name, department }
+  update: (id, payload) => api.put(`/roles/${id}`, payload),
+  remove: (id) => api.del(`/roles/${id}`),
+  permissions: (id) => api.get(`/roles/${id}/permissions`),
+  assignPermission: (id, permissionId) => api.post(`/roles/${id}/permissions/${permissionId}`, {}),
+  removePermission: (id, permissionId) => api.del(`/roles/${id}/permissions/${permissionId}`),
+};
+
+export const PermissionApi = {
+  list: () => api.get('/permissions'),
+};
+
+export const UserApi = {
+  list: () => api.get('/users'),
+  register: (payload) => api.post('/auth/register', payload, { auth: false }),
 };
 
 export const EmployeeApi = {

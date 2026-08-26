@@ -27,9 +27,8 @@ import { ReportsPage } from '../features/reports/ReportsPage.jsx';
 import { PaymentsPage } from '../features/payments/PaymentsPage.jsx';
 import { AuditPage } from '../features/audit/AuditPage.jsx';
 import { FxPage } from '../features/fx/FxPage.jsx';
-import {
-  UsersPage, NotFoundPage,
-} from '../features/scaffolds.jsx';
+import { UsersRolesPage } from '../features/admin/UsersRolesPage.jsx';
+import { NotFoundPage } from '../features/scaffolds.jsx';
 
 export default function App() {
   return (
@@ -61,7 +60,7 @@ export default function App() {
               <Route path="deposits/new" element={<BookDepositPage />} />
               <Route path="compliance" element={<CompliancePage />} />
               <Route path="branches" element={<BranchesListPage />} />
-              <Route path="admin/users" element={<UsersPage />} />
+              <Route path="admin/users" element={<UsersRolesPage />} />
               <Route path="audit" element={<AuditPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="*" element={<NotFoundPage />} />
