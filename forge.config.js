@@ -32,6 +32,9 @@ module.exports = {
     {
       name: '@electron-forge/plugin-webpack',
       config: {
+        // 9000 (default loggerPort) is used by MinIO on this machine; move to free ports.
+        port: 3017,
+        loggerPort: 9017,
         mainConfig: './webpack.main.config.js',
         renderer: {
           config: './webpack.renderer.config.js',
