@@ -30,7 +30,7 @@ export function CardsPage() {
   const rows = useMemo(() => {
     const term = q.trim().toLowerCase();
     if (!term) return cards;
-    return cards.filter((c) => [c.customer_name, c.card_number, c.card_type, c.status].filter(Boolean).some((v) => String(v).toLowerCase().includes(term)));
+    return cards.filter((c) => [c.customer_name, c.card_number, c.card_type, c.scheme, c.status].filter(Boolean).some((v) => String(v).toLowerCase().includes(term)));
   }, [cards, q]);
 
   const active = cards.filter((c) => String(c.status).toLowerCase() === 'active').length;
@@ -93,21 +93,21 @@ function CardVisual({ card, busy, onToggle }) {
             <div className="text-sm font-semibold tracking-wide">AfriCore</div>
             <div className="text-[10px] uppercase tracking-[0.18em] text-white/60">{card.card_type} card</div>
           </div>
-          <Nfc size={22} className="text-white/70" />
+          {card.virtual
+            ? <span className="text-[9px] font-semibold uppercase tracking-wide bg-white/15 rounded px-1.5 py-0.5">Virtual</span>
+            : <Nfc size={22} className="text-white/70" />}
         </div>
         <div className="relative">
           <div className="w-9 h-6 rounded-md bg-gradient-to-br from-yellow-200/90 to-yellow-500/80 mb-2.5" />
           <div className="num text-lg tracking-[0.18em]">{maskCard(card.card_number)}</div>
         </div>
-        <div className="relative flex items-end justify-between">
+        <div className="relative flex items-end justify-between gap-2">
           <div className="min-w-0">
             <div className="text-[10px] uppercase tracking-wide text-white/50">Card holder</div>
-            <div className="text-sm font-medium truncate max-w-[180px]">{card.customer_name || '—'}</div>
+            <div className="text-sm font-medium truncate max-w-[150px]">{card.customer_name || '—'}</div>
+            <div className="num text-2xs text-white/70 mt-0.5">EXP {card.expiry_date ? formatDate(card.expiry_date, { month: '2-digit', year: '2-digit' }) : '—'}</div>
           </div>
-          <div className="text-right">
-            <div className="text-[10px] uppercase tracking-wide text-white/50">Expires</div>
-            <div className="num text-sm">{card.expiry_date ? formatDate(card.expiry_date, { month: '2-digit', year: '2-digit' }) : '—'}</div>
-          </div>
+          <SchemeMark scheme={card.scheme} />
         </div>
         {blocked && <div className="absolute inset-0 bg-navy-950/40 backdrop-blur-[1px] flex items-center justify-center"><Badge tone="danger"><Lock size={11} /> Blocked</Badge></div>}
       </div>
@@ -124,13 +124,28 @@ function CardVisual({ card, busy, onToggle }) {
   );
 }
 
+function SchemeMark({ scheme }) {
+  const s = String(scheme || 'visa').toLowerCase();
+  if (s === 'mastercard') {
+    return (
+      <div className="flex items-center shrink-0" title="Mastercard">
+        <span className="w-6 h-6 rounded-full bg-red-500" />
+        <span className="w-6 h-6 rounded-full bg-amber-400 -ml-2.5 mix-blend-hard-light" />
+      </div>
+    );
+  }
+  if (s === 'verve') return <span className="font-bold text-base tracking-tight text-white shrink-0" title="Verve">verve</span>;
+  if (s === 'amex') return <span className="font-semibold tracking-[0.2em] text-xs shrink-0" title="American Express">AMEX</span>;
+  return <span className="italic font-extrabold text-lg tracking-tight shrink-0" title="Visa">VISA</span>;
+}
+
 function IssueCardModal({ open, onClose, onIssued }) {
   const toast = useToast();
   const accounts = useAsync(async () => {
     const accts = await loadAllAccounts();
     return accts;
   }, [], { immediate: open });
-  const [form, setForm] = useState({ account_id: '', card_type: 'debit', expiry_date: defaultExpiry() });
+  const [form, setForm] = useState({ account_id: '', card_type: 'debit', scheme: 'visa', virtual: false, expiry_date: defaultExpiry() });
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const acctList = accounts.data || [];
@@ -140,8 +155,8 @@ function IssueCardModal({ open, onClose, onIssued }) {
     if (!form.expiry_date) return toast.error('Set an expiry date');
     setBusy(true);
     try {
-      await CardApi.issue(form.account_id, { card_type: form.card_type, expiry_date: form.expiry_date });
-      toast.success('Card issued', { title: `${form.card_type} card` });
+      await CardApi.issue(form.account_id, { card_type: form.card_type, scheme: form.scheme, virtual: form.virtual, expiry_date: form.expiry_date });
+      toast.success('Card issued', { title: `${form.scheme} ${form.card_type}${form.virtual ? ' · virtual' : ''}` });
       onIssued?.();
       onClose();
     } catch (err) { toast.error(err?.message || 'Could not issue card'); }
@@ -163,6 +178,24 @@ function IssueCardModal({ open, onClose, onIssued }) {
             <Select value={form.card_type} onChange={set('card_type')}>
               <option value="debit">Debit</option><option value="credit">Credit</option>
             </Select>
+          </Field>
+          <Field label="Scheme" required>
+            <Select value={form.scheme} onChange={set('scheme')}>
+              <option value="visa">Visa</option>
+              <option value="mastercard">Mastercard</option>
+              <option value="verve">Verve</option>
+              <option value="amex">American Express</option>
+            </Select>
+          </Field>
+          <Field label="Form factor" required>
+            <div className="flex items-center gap-1 bg-slate-100 rounded-md p-0.5 h-9">
+              {[{ v: false, l: 'Physical' }, { v: true, l: 'Virtual' }].map((o) => (
+                <button key={o.l} type="button" onClick={() => setForm((f) => ({ ...f, virtual: o.v }))}
+                  className={cn('flex-1 text-xs font-medium rounded px-2 py-1 transition-colors', form.virtual === o.v ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                  {o.l}
+                </button>
+              ))}
+            </div>
           </Field>
           <Field label="Expiry date" required>
             <Input type="date" value={form.expiry_date} onChange={set('expiry_date')} />

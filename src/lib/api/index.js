@@ -52,6 +52,13 @@ export const LoanApi = {
   remove: (id) => api.del(`/loans/${id}`),
 };
 
+export const BeneficiaryApi = {
+  list: (ownerCustomerId, params) => api.get('/beneficiaries', { params: { owner_customer_id: ownerCustomerId, ...params } }),
+  get: (id) => api.get(`/beneficiaries/${id}`),
+  create: (payload) => api.post('/beneficiaries', payload),
+  remove: (id) => api.del(`/beneficiaries/${id}`),
+};
+
 export const BranchApi = {
   list: () => api.get('/branches'),
   get: (id) => api.get(`/branches/${id}`),
@@ -82,13 +89,21 @@ export const ComplianceApi = {
 };
 
 export const AuditApi = {
-  list: (params) => api.get('/audit', { params }),
+  list: (params) => api.get('/audits', { params }),
+  stats: () => api.get('/audits/stats'),
 };
 
 export const ExchangeRateApi = {
   latest: (params) => api.get('/exchange-rates/latest', { params }),
   convert: (params) => api.get('/exchange-rates/convert', { params }),
   currencies: () => api.get('/exchange-rates/currencies'),
+};
+
+export const FxRateApi = {
+  list: () => api.get('/fx-rates'),
+  upsert: (payload) => api.post('/fx-rates', payload), // { base_currency, quote_currency, rate }
+  update: (id, rate) => api.put(`/fx-rates/${id}`, { rate }),
+  remove: (id) => api.del(`/fx-rates/${id}`),
 };
 
 export const ReportApi = {

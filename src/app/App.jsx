@@ -23,9 +23,11 @@ import { BranchesListPage } from '../features/branches/BranchesListPage.jsx';
 import { CardsPage } from '../features/cards/CardsPage.jsx';
 import { TransactionsPage } from '../features/transactions/TransactionsPage.jsx';
 import { ReportsPage } from '../features/reports/ReportsPage.jsx';
+import { PaymentsPage } from '../features/payments/PaymentsPage.jsx';
+import { AuditPage } from '../features/audit/AuditPage.jsx';
+import { FxPage } from '../features/fx/FxPage.jsx';
 import {
-  PaymentsPage, FxPage,
-  UsersPage, AuditPage, NotFoundPage,
+  UsersPage, NotFoundPage,
 } from '../features/scaffolds.jsx';
 
 export default function App() {
