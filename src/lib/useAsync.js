@@ -29,9 +29,10 @@ export function useAsync(fn, deps = [], { immediate = true } = {}) {
   }, deps);
 
   useEffect(() => {
+    // Fire on mount/deps change, and when `immediate` flips true (e.g. a modal opens).
     if (immediate) run().catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [run]);
+  }, [run, immediate]);
 
   return { ...state, reload: run };
 }

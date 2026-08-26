@@ -13,10 +13,14 @@ import { CustomerDetailPage } from '../features/customers/CustomerDetailPage.jsx
 import { AccountsListPage } from '../features/accounts/AccountsListPage.jsx';
 import { AccountDetailPage } from '../features/accounts/AccountDetailPage.jsx';
 import { TellerPage } from '../features/teller/TellerPage.jsx';
+import { LoansListPage } from '../features/loans/LoansListPage.jsx';
+import { LoanCreatePage } from '../features/loans/LoanCreatePage.jsx';
+import { LoanDetailPage } from '../features/loans/LoanDetailPage.jsx';
+import { DepositsListPage } from '../features/deposits/DepositsListPage.jsx';
+import { BookDepositPage } from '../features/deposits/BookDepositPage.jsx';
 import {
-  PaymentsPage, TransactionsPage, FxPage, LoansPage,
-  DepositsPage, CardsPage, CompliancePage, BranchesPage, UsersPage, AuditPage,
-  ReportsPage, NotFoundPage,
+  PaymentsPage, TransactionsPage, FxPage, CardsPage, CompliancePage,
+  BranchesPage, UsersPage, AuditPage, ReportsPage, NotFoundPage,
 } from '../features/scaffolds.jsx';
 
 export default function App() {
@@ -39,8 +43,11 @@ export default function App() {
               <Route path="payments" element={<PaymentsPage />} />
               <Route path="transactions" element={<TransactionsPage />} />
               <Route path="fx" element={<FxPage />} />
-              <Route path="loans" element={<LoansPage />} />
-              <Route path="deposits" element={<DepositsPage />} />
+              <Route path="loans" element={<LoansListPage />} />
+              <Route path="loans/new" element={<LoanCreatePage />} />
+              <Route path="loans/:id" element={<LoanDetailPage />} />
+              <Route path="deposits" element={<DepositsListPage />} />
+              <Route path="deposits/new" element={<BookDepositPage />} />
               <Route path="compliance" element={<CompliancePage />} />
               <Route path="branches" element={<BranchesPage />} />
               <Route path="admin/users" element={<UsersPage />} />

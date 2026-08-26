@@ -9,4 +9,5 @@ export { Modal } from './Modal.jsx';
 export { Tabs } from './Tabs.jsx';
 export { PageHeader } from './PageHeader.jsx';
 export { StatCard } from './StatCard.jsx';
+export { MiniBars } from './MiniBars.jsx';
 export { ToastProvider, useToast } from './Toast.jsx';

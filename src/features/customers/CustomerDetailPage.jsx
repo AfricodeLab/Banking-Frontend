@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, Wallet, ShieldCheck, Plus, Calendar, Landmark } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, Wallet, ShieldCheck, Plus, Calendar, Landmark, Users } from 'lucide-react';
 import { CustomerApi, AccountApi, LoanApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
 import { Card, CardHeader, Tabs, StatusPill, Button, DataTable, Spinner, Badge } from '../../components/ui/index.js';
-import { formatMoney, formatDate, initials } from '../../lib/format.js';
+import { formatMoney, formatDate, formatNumber, initials } from '../../lib/format.js';
 import { OpenAccountModal } from '../accounts/OpenAccountModal.jsx';
 import { useLeafCrumb } from '../../components/layout/Breadcrumbs.jsx';
 import { asList } from '../accounts/accountsData.js';
@@ -98,6 +98,7 @@ export function CustomerDetailPage() {
         onChange={setTab}
         tabs={[
           { value: 'overview', label: 'Overview' },
+          { value: 'profile', label: 'Profile & KYC' },
           { value: 'accounts', label: 'Accounts', count: accList.length },
           { value: 'loans', label: 'Loans', count: loanList.length },
           { value: 'compliance', label: 'Compliance' },
@@ -123,6 +124,60 @@ export function CustomerDetailPage() {
               <Row label="Onboarded" value={formatDate(c.created_at) !== '—' ? formatDate(c.created_at) : 'Recently'} />
             </div>
           </Card>
+        </div>
+      )}
+
+      {tab === 'profile' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader title="Identity & KYC" icon={ShieldCheck} />
+            <div className="p-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+              <Item label="Title" value={c.title} />
+              <Item label="Customer type" value={c.customer_type} cap />
+              <Item label="Gender" value={c.gender} cap />
+              <Item label="Marital status" value={c.marital_status} cap />
+              <Item label="Nationality" value={c.nationality} />
+              <Item label="Place of birth" value={c.place_of_birth} />
+              <Item label="ID type" value={(c.id_type || '').replace('_', ' ')} cap />
+              <Item label="ID number" value={c.id_number} mono />
+              <Item label="ID expiry" value={c.id_expiry && formatDate(c.id_expiry)} />
+              <Item label="Tax ID (TIN)" value={c.tin} mono />
+              <Item label="Risk rating" value={c.risk_rating} cap />
+            </div>
+          </Card>
+          <div className="space-y-4">
+            <Card>
+              <CardHeader title="Contact & address" icon={MapPin} />
+              <div className="p-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                <Item label="Email" value={c.email} />
+                <Item label="Phone" value={c.phone} mono />
+                <Item label="Alt. phone" value={c.alt_phone} mono />
+                <Item label="Digital address" value={c.digital_address} mono />
+                <Item label="City" value={c.city} />
+                <Item label="Region" value={c.region} />
+                <Item label="Country" value={c.country} />
+                <Item label="Address" value={c.address} span />
+              </div>
+            </Card>
+            <Card>
+              <CardHeader title="Employment & financial" icon={Wallet} />
+              <div className="p-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                <Item label="Status" value={(c.employment_status || '').replace('_', '-')} cap />
+                <Item label="Occupation" value={c.occupation} />
+                <Item label="Employer" value={c.employer} />
+                <Item label="Monthly income" value={c.monthly_income ? formatNumber(c.monthly_income, { minimumFractionDigits: 2 }) : null} mono />
+                <Item label="Source of funds" value={c.source_of_funds} cap />
+              </div>
+            </Card>
+            <Card>
+              <CardHeader title="Next of kin" icon={Users} />
+              <div className="p-4 grid grid-cols-3 gap-x-4 gap-y-3 text-sm">
+                <Item label="Name" value={c.next_of_kin_name} />
+                <Item label="Relationship" value={c.next_of_kin_relation} cap />
+                <Item label="Phone" value={c.next_of_kin_phone} mono />
+              </div>
+            </Card>
+          </div>
         </div>
       )}
 
@@ -184,6 +239,15 @@ function Row({ label, value }) {
     <div className="flex items-center justify-between gap-3">
       <span className="text-slate-400 text-xs uppercase tracking-wide">{label}</span>
       <span className="text-slate-700">{value}</span>
+    </div>
+  );
+}
+
+function Item({ label, value, mono, cap, span }) {
+  return (
+    <div className={span ? 'col-span-2' : ''}>
+      <div className="text-2xs uppercase tracking-wide text-slate-400">{label}</div>
+      <div className={`text-slate-700 mt-0.5 ${mono ? 'num' : ''} ${cap ? 'capitalize' : ''} ${!value ? 'text-slate-300' : ''}`}>{value || '—'}</div>
     </div>
   );
 }
