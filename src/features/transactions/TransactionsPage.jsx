@@ -1,13 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import {
-  Receipt, Search, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, CheckCircle2,
+  Receipt, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, CheckCircle2,
   Clock, XCircle, ScrollText,
 } from 'lucide-react';
 import { TransactionApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
 import { loadAllTransactions, partyLabel } from './transactionsData.js';
 import { asList } from '../accounts/accountsData.js';
-import { PageHeader, Card, DataTable, StatusPill, Button, Input, Select, StatCard, Modal, Spinner, Field, useToast, useConfirm } from '../../components/ui/index.js';
+import {
+  PageHeader, Card, DataTable, StatusPill, Button, Input, StatCard, Modal, Spinner, Field, useToast, useConfirm,
+  Toolbar, ToolbarRow, ToolbarSpacer, ToolbarFilters, SearchInput, SegmentedControl, FilterSelect, DateRangeFilter, ResultCount,
+} from '../../components/ui/index.js';
 import { RotateCcw } from 'lucide-react';
 import { formatMoney, formatDateTime, formatDate } from '../../lib/format.js';
 import { cn } from '../../lib/cn.js';
@@ -25,6 +28,9 @@ export function TransactionsPage() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [selected, setSelected] = useState(null);
+
+  const activeFilters = (status !== 'all' ? 1 : 0) + (from ? 1 : 0) + (to ? 1 : 0);
+  const clearFilters = () => { setStatus('all'); setFrom(''); setTo(''); };
 
   const txns = data || [];
   const rows = useMemo(() => {
@@ -71,30 +77,19 @@ export function TransactionsPage() {
       </div>
 
       <Card>
-        <div className="flex flex-col lg:flex-row lg:items-center gap-3 px-4 py-3 border-b border-slate-100">
-          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
-            {TYPES.map((t) => (
-              <button key={t} onClick={() => setType(t)}
-                className={cn('px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-colors', type === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
-                {t}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-2 flex-wrap lg:ml-auto">
-            <Select value={status} onChange={(e) => setStatus(e.target.value)} className="w-auto h-9">
-              {['all', 'completed', 'pending', 'failed', 'cancelled'].map((s) => <option key={s} value={s} className="capitalize">{s === 'all' ? 'All statuses' : s}</option>)}
-            </Select>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-auto" title="From date" />
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-auto" title="To date" />
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search ref, name, amount…" className="pl-9 w-56" />
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center justify-between px-4 py-2 text-xs text-slate-400 border-b border-slate-100">
-          <span>{loading ? 'Loading…' : `${rows.length} of ${txns.length} transactions`}</span>
-        </div>
+        <Toolbar>
+          <ToolbarRow>
+            <SegmentedControl options={TYPES} value={type} onChange={setType} />
+            <ToolbarSpacer />
+            <ResultCount shown={rows.length} total={txns.length} noun="transactions" loading={loading} />
+            <SearchInput value={q} onChange={setQ} placeholder="Search ref, name, amount…" />
+          </ToolbarRow>
+          <ToolbarFilters active={activeFilters} onClear={clearFilters}>
+            <FilterSelect label="Status" value={status} onChange={setStatus}
+              options={['all', 'completed', 'pending', 'failed', 'cancelled'].map((s) => ({ value: s, label: s === 'all' ? 'All statuses' : s }))} />
+            <DateRangeFilter from={from} to={to} onFrom={setFrom} onTo={setTo} />
+          </ToolbarFilters>
+        </Toolbar>
         <DataTable columns={columns} rows={loading ? null : rows} loading={loading} error={error}
           onRowClick={(t) => setSelected(t)} rowKey={(t) => t.transaction_id}
           empty={{ icon: Receipt, title: 'No transactions', description: 'Adjust filters or post transactions from the Teller.' }} />

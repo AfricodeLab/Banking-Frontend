@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { CreditCard, Plus, Search, Nfc, Lock, LockOpen, ShieldCheck } from 'lucide-react';
+import { CreditCard, Plus, Nfc, Lock, LockOpen, ShieldCheck } from 'lucide-react';
 import { CardApi, AccountApi, CustomerApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
 import { loadAllAccounts, asList } from '../accounts/accountsData.js';
-import { PageHeader, Card, Button, Input, StatCard, Badge, StatusPill, Modal, Field, Select, EmptyState, Spinner, useToast, useConfirm } from '../../components/ui/index.js';
+import { PageHeader, Card, Button, Input, StatCard, Badge, StatusPill, Modal, Field, Select, EmptyState, Spinner, useToast, useConfirm, SearchInput, ResultCount } from '../../components/ui/index.js';
 import { formatMoney, maskCard, formatDate } from '../../lib/format.js';
 import { cn } from '../../lib/cn.js';
 
@@ -68,9 +68,9 @@ export function CardsPage() {
         <StatCard label="Blocked" value={loading ? '—' : blocked} icon={Lock} accent={blocked ? 'danger' : 'slate'} />
       </div>
 
-      <div className="relative max-w-sm mb-4">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search holder, card number, type…" className="pl-9" />
+      <div className="flex items-center gap-3 mb-4">
+        <SearchInput value={q} onChange={setQ} placeholder="Search holder, card number, type…" width="w-80" />
+        <ResultCount shown={rows.length} noun="cards" loading={loading} />
       </div>
 
       {loading && <div className="flex items-center justify-center gap-2 py-16 text-slate-400"><Spinner size={20} /> Loading cards…</div>}

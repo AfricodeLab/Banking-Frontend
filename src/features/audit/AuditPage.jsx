@@ -1,12 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { ScrollText, Search, Activity, Clock, CalendarDays, ShieldCheck } from 'lucide-react';
+import { ScrollText, Activity, Clock, CalendarDays, ShieldCheck } from 'lucide-react';
 import { AuditApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
 import { useAuth } from '../../lib/auth/AuthContext.jsx';
-import { PageHeader, Card, DataTable, StatCard, Badge, Input, Select } from '../../components/ui/index.js';
+import {
+  PageHeader, Card, DataTable, StatCard, Badge,
+  Toolbar, ToolbarRow, ToolbarSpacer, SearchInput, SegmentedControl, ResultCount,
+} from '../../components/ui/index.js';
 import { formatDateTime, formatNumber, initials } from '../../lib/format.js';
 import { asList } from '../accounts/accountsData.js';
-import { cn } from '../../lib/cn.js';
 
 // Actions look like "TRANSACTION_PROCESS_TRANSACTION_ID:<uuid>" — parse into entity/op/ref.
 function parseAction(action = '') {
@@ -75,20 +77,16 @@ export function AuditPage() {
       </div>
 
       <Card>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3 border-b border-slate-100">
-          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5 overflow-x-auto scroll-thin">
-            {entities.map((e) => (
-              <button key={e} onClick={() => setEntity(e)}
-                className={cn('px-3 py-1.5 text-xs font-medium rounded-md capitalize whitespace-nowrap transition-colors', entity === e ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
-                {e === 'all' ? 'All modules' : e.toLowerCase()}
-              </button>
-            ))}
-          </div>
-          <div className="relative flex-1 max-w-xs sm:ml-auto">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search action, reference, actor…" className="pl-9" />
-          </div>
-        </div>
+        <Toolbar>
+          <ToolbarRow>
+            <SegmentedControl
+              options={entities.map((e) => ({ value: e, label: e === 'all' ? 'All modules' : e.toLowerCase() }))}
+              value={entity} onChange={setEntity} />
+            <ToolbarSpacer />
+            <ResultCount shown={rows.length} total={(logsQ.data || []).length} noun="events" loading={logsQ.loading} />
+            <SearchInput value={q} onChange={setQ} placeholder="Search action, reference, actor…" width="w-72" />
+          </ToolbarRow>
+        </Toolbar>
         <DataTable
           columns={columns}
           rows={logsQ.loading ? null : rows}

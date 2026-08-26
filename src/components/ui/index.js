@@ -14,3 +14,7 @@ export { Pagination } from './Pagination.jsx';
 export { BarChart } from './BarChart.jsx';
 export { ToastProvider, useToast } from './Toast.jsx';
 export { ConfirmProvider, useConfirm } from './Confirm.jsx';
+export {
+  Toolbar, ToolbarRow, ToolbarSpacer, ToolbarFilters,
+  SearchInput, SegmentedControl, FilterSelect, DateRangeFilter, ResultCount,
+} from './Toolbar.jsx';

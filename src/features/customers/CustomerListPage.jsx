@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Download, Users } from 'lucide-react';
+import { Plus, Download, Users } from 'lucide-react';
 import { CustomerApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
-import { PageHeader, Card, DataTable, StatusPill, Button, Input } from '../../components/ui/index.js';
+import { PageHeader, Card, DataTable, StatusPill, Button, Toolbar, ToolbarRow, ToolbarSpacer, SearchInput, ResultCount } from '../../components/ui/index.js';
 import { formatDate, initials } from '../../lib/format.js';
 
 const asList = (r) => (Array.isArray(r) ? r : r?.data || []);
@@ -55,15 +55,13 @@ export function CustomerListPage() {
       />
 
       <Card>
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
-          <div className="relative flex-1 max-w-sm">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, email, phone or CIF…" className="pl-9" />
-          </div>
-          <div className="ml-auto text-xs text-slate-400">
-            {loading ? 'Loading…' : `${rows.length} of ${list.length} customers`}
-          </div>
-        </div>
+        <Toolbar>
+          <ToolbarRow>
+            <SearchInput value={q} onChange={setQ} placeholder="Search name, email, phone or CIF…" width="w-80" />
+            <ToolbarSpacer />
+            <ResultCount shown={rows.length} total={list.length} noun="customers" loading={loading} />
+          </ToolbarRow>
+        </Toolbar>
 
         <DataTable
           columns={columns}

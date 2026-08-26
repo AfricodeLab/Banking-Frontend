@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Wallet, Landmark, Layers } from 'lucide-react';
+import { Plus, Wallet, Landmark, Layers } from 'lucide-react';
 import { useAsync } from '../../lib/useAsync.js';
 import { loadAllAccounts } from './accountsData.js';
-import { PageHeader, Card, DataTable, StatusPill, Badge, Button, Input, StatCard } from '../../components/ui/index.js';
+import { PageHeader, Card, DataTable, StatusPill, Badge, Button, StatCard, Toolbar, ToolbarRow, ToolbarSpacer, SearchInput, ResultCount } from '../../components/ui/index.js';
 import { formatMoney } from '../../lib/format.js';
 import { OpenAccountModal } from './OpenAccountModal.jsx';
 
@@ -51,13 +51,13 @@ export function AccountsListPage() {
       </div>
 
       <Card>
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
-          <div className="relative flex-1 max-w-sm">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search account #, customer, type…" className="pl-9" />
-          </div>
-          <div className="ml-auto text-xs text-slate-400">{loading ? 'Loading…' : `${rows.length} accounts`}</div>
-        </div>
+        <Toolbar>
+          <ToolbarRow>
+            <SearchInput value={q} onChange={setQ} placeholder="Search account #, customer, type…" width="w-80" />
+            <ToolbarSpacer />
+            <ResultCount shown={rows.length} total={accounts.length} noun="accounts" loading={loading} />
+          </ToolbarRow>
+        </Toolbar>
         <DataTable
           columns={columns}
           rows={loading ? null : rows}

@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { Plus, Search, Building2, MapPin, Clock, Phone, Network } from 'lucide-react';
+import { Plus, Building2, MapPin, Clock, Phone, Network } from 'lucide-react';
 import { BranchApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
-import { PageHeader, Card, DataTable, Button, Input, StatCard, Modal, Field, useToast } from '../../components/ui/index.js';
+import { PageHeader, Card, DataTable, Button, Input, StatCard, Modal, Field, useToast, Toolbar, ToolbarRow, ToolbarSpacer, SearchInput, ResultCount } from '../../components/ui/index.js';
 import { asList } from '../accounts/accountsData.js';
 
 export function BranchesListPage() {
@@ -48,13 +48,13 @@ export function BranchesListPage() {
       </div>
 
       <Card>
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
-          <div className="relative flex-1 max-w-sm">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search location or contact…" className="pl-9" />
-          </div>
-          <div className="ml-auto text-xs text-slate-400">{branches.loading ? 'Loading…' : `${rows.length} branches`}</div>
-        </div>
+        <Toolbar>
+          <ToolbarRow>
+            <SearchInput value={q} onChange={setQ} placeholder="Search location or contact…" width="w-80" />
+            <ToolbarSpacer />
+            <ResultCount shown={rows.length} noun="branches" loading={branches.loading} />
+          </ToolbarRow>
+        </Toolbar>
         <DataTable columns={columns} rows={branches.loading ? null : rows} loading={branches.loading} error={branches.error}
           rowKey={(b) => b.branch_id}
           empty={{ icon: Building2, title: 'No branches', description: 'Add your first branch.', action: <Button icon={Plus} onClick={() => setOpen(true)}>New branch</Button> }} />

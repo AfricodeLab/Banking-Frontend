@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Landmark, Wallet, TrendingUp } from 'lucide-react';
+import { Plus, Landmark, Wallet, TrendingUp } from 'lucide-react';
 import { LoanApi, CustomerApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
-import { PageHeader, Card, DataTable, StatusPill, Button, Input, StatCard } from '../../components/ui/index.js';
+import { PageHeader, Card, DataTable, StatusPill, Button, StatCard, Toolbar, ToolbarRow, ToolbarSpacer, SearchInput, ResultCount } from '../../components/ui/index.js';
 import { formatMoney } from '../../lib/format.js';
 import { asList } from '../accounts/accountsData.js';
 
@@ -53,13 +53,13 @@ export function LoansListPage() {
       </div>
 
       <Card>
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
-          <div className="relative flex-1 max-w-sm">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search loan #, customer, product…" className="pl-9" />
-          </div>
-          <div className="ml-auto text-xs text-slate-400">{loading ? 'Loading…' : `${rows.length} loans`}</div>
-        </div>
+        <Toolbar>
+          <ToolbarRow>
+            <SearchInput value={q} onChange={setQ} placeholder="Search loan #, customer, product…" width="w-80" />
+            <ToolbarSpacer />
+            <ResultCount shown={rows.length} noun="loans" loading={loading} />
+          </ToolbarRow>
+        </Toolbar>
         <DataTable columns={columns} rows={loading ? null : rows} loading={loading} error={error}
           onRowClick={(l) => navigate(`/loans/${l.loan_id}`)} rowKey={(l) => l.loan_id}
           empty={{ icon: Landmark, title: q ? 'No matching loans' : 'No loans yet', description: q ? 'Try another search.' : 'Originate the first loan.', action: !q && <Button icon={Plus} onClick={() => navigate('/loans/new')}>New loan</Button> }} />

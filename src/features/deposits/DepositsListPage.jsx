@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, PiggyBank, Landmark, Percent, Info } from 'lucide-react';
+import { Plus, PiggyBank, Landmark, Percent, Info } from 'lucide-react';
 import { useAsync } from '../../lib/useAsync.js';
 import { loadAllAccounts } from '../accounts/accountsData.js';
 import { getTD, maturity } from './tdStore.js';
-import { PageHeader, Card, DataTable, StatusPill, Badge, Button, Input, StatCard } from '../../components/ui/index.js';
+import { PageHeader, Card, DataTable, StatusPill, Badge, Button, StatCard, Toolbar, ToolbarRow, ToolbarSpacer, SearchInput, ResultCount } from '../../components/ui/index.js';
 import { formatMoney, formatDate } from '../../lib/format.js';
 
 export function DepositsListPage() {
@@ -54,13 +54,13 @@ export function DepositsListPage() {
       </div>
 
       <Card>
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
-          <div className="relative flex-1 max-w-sm">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search deposit #, customer…" className="pl-9" />
-          </div>
-          <div className="ml-auto text-xs text-slate-400">{loading ? 'Loading…' : `${rows.length} deposits`}</div>
-        </div>
+        <Toolbar>
+          <ToolbarRow>
+            <SearchInput value={q} onChange={setQ} placeholder="Search deposit #, customer…" width="w-80" />
+            <ToolbarSpacer />
+            <ResultCount shown={rows.length} noun="deposits" loading={loading} />
+          </ToolbarRow>
+        </Toolbar>
         <DataTable columns={columns} rows={loading ? null : rows} loading={loading} error={error}
           onRowClick={(d) => navigate(`/accounts/${d.account_id}`)} rowKey={(d) => d.account_id}
           empty={{ icon: PiggyBank, title: q ? 'No matching deposits' : 'No term deposits yet', description: q ? 'Try another search.' : 'Book the first fixed deposit.', action: !q && <Button icon={Plus} onClick={() => navigate('/deposits/new')}>Book deposit</Button> }} />
