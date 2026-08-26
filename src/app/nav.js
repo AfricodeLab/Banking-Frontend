@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, Wallet, Banknote, ArrowLeftRight, Receipt,
   Landmark, PiggyBank, CreditCard, ShieldCheck, Building2, UserCog,
-  ScrollText, BarChart3, Repeat,
+  ScrollText, BarChart3, Repeat, Code2,
 } from 'lucide-react';
 
 /**
@@ -50,6 +50,7 @@ export const NAV_GROUPS = [
     items: [
       { to: '/branches', label: 'Branches', icon: Building2 },
       { to: '/admin/users', label: 'Users & Roles', icon: UserCog },
+      { to: '/developers', label: 'Developers', icon: Code2 },
       { to: '/audit', label: 'Audit Trail', icon: ScrollText },
       { to: '/reports', label: 'Reports', icon: BarChart3 },
     ],

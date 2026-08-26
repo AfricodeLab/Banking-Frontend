@@ -138,6 +138,12 @@ export const ReportApi = {
   dailySummary: (params) => api.get('/reports/daily-summary', { params }),
 };
 
+export const ApiKeyApi = {
+  list: () => api.get('/api-keys'),
+  create: (payload) => api.post('/api-keys', payload), // { name, owner, scopes }
+  revoke: (id) => api.del(`/api-keys/${id}`),
+};
+
 export const SystemApi = {
   health: () => api.get('/health', { auth: false }),
   metrics: () => api.get('/metrics', { auth: false }),

@@ -28,6 +28,7 @@ import { PaymentsPage } from '../features/payments/PaymentsPage.jsx';
 import { AuditPage } from '../features/audit/AuditPage.jsx';
 import { FxPage } from '../features/fx/FxPage.jsx';
 import { UsersRolesPage } from '../features/admin/UsersRolesPage.jsx';
+import { DeveloperPage } from '../features/developers/DeveloperPage.jsx';
 import { NotFoundPage } from '../features/scaffolds.jsx';
 
 export default function App() {
@@ -61,6 +62,7 @@ export default function App() {
               <Route path="compliance" element={<CompliancePage />} />
               <Route path="branches" element={<BranchesListPage />} />
               <Route path="admin/users" element={<UsersRolesPage />} />
+              <Route path="developers" element={<DeveloperPage />} />
               <Route path="audit" element={<AuditPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="*" element={<NotFoundPage />} />
