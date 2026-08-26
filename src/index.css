@@ -1,3 +1,59 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html, body {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: #f3f5f9;
+    color: #111827;
+    font-family: '"Inter Variable"', Inter, system-ui, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Financial figures: tabular, mono, aligned */
+  .num {
+    font-family: '"IBM Plex Mono"', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  :focus-visible {
+    outline: 2px solid theme('colors.brand.500');
+    outline-offset: 1px;
+    border-radius: 3px;
+  }
+
+  ::selection { background: theme('colors.brand.200'); }
+}
+
+@layer components {
+  /* Thin, quiet enterprise scrollbars */
+  .scroll-thin::-webkit-scrollbar { width: 9px; height: 9px; }
+  .scroll-thin::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.35);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  .scroll-thin::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.55); background-clip: content-box; }
+  .scroll-thin::-webkit-scrollbar-track { background: transparent; }
+
+  .card {
+    @apply bg-white border border-slate-200 rounded-lg shadow-card;
+  }
+
+  /* Dense data-grid row hover */
+  .grid-row { @apply border-b border-slate-100 transition-colors; }
+  .grid-row:hover { @apply bg-brand-50; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
