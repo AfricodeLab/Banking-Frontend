@@ -7,7 +7,8 @@ import {
 import { TransactionApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
 import { useAuth } from '../../lib/auth/AuthContext.jsx';
-import { loadAllAccounts } from '../accounts/accountsData.js';
+import { loadAllAccounts, asList } from '../accounts/accountsData.js';
+import { loadTellerSession, saveTellerSession, clearTellerSession } from './tellerSession.js';
 import { PageHeader, Card, CardHeader, Field, Select, Input, Button, StatusPill, Badge, useToast } from '../../components/ui/index.js';
 import { formatMoney } from '../../lib/format.js';
 import { cn } from '../../lib/cn.js';
@@ -34,15 +35,31 @@ export function TellerPage() {
   const { data, loading, reload } = useAsync(() => loadAllAccounts(), []);
   const accounts = data || [];
 
-  const [op, setOp] = useState('deposit');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState(params.get('account') || '');
+  const persisted = useMemo(() => loadTellerSession(), []);
+  const [op, setOp] = useState(persisted.op);
+  const [from, setFrom] = useState(persisted.from);
+  const [to, setTo] = useState(params.get('account') || persisted.to);
   const [amount, setAmount] = useState('');
   const [desc, setDesc] = useState('');
   const [denoms, setDenoms] = useState({});
   const [busy, setBusy] = useState(false);
   const [receipt, setReceipt] = useState(null);
-  const [session, setSession] = useState({ txns: [], cashIn: 0, cashOut: 0 });
+  const [session, setSession] = useState(persisted.session);
+  const [journalTab, setJournalTab] = useState('session');
+
+  // Persist the working session so it survives navigation / reloads.
+  useEffect(() => { saveTellerSession({ op, from, to, session }); }, [op, from, to, session]);
+
+  const endSession = () => {
+    clearTellerSession();
+    setSession({ txns: [], cashIn: 0, cashOut: 0 });
+    setReceipt(null);
+    toast.success('Till session ended');
+  };
+
+  // History for the account currently in focus (destination, else source).
+  const focusId = to || from;
+  const history = useAsync(() => (focusId ? TransactionApi.byAccount(focusId).then(asList) : Promise.resolve([])), [focusId]);
 
   useEffect(() => {
     const preset = params.get('account');
@@ -86,6 +103,7 @@ export function TellerPage() {
       }));
       setAmount(''); setDesc(''); setDenoms({});
       await reload();
+      history.reload();
     } catch (err) {
       toast.error(err?.message || 'Transaction failed');
     } finally { setBusy(false); }
@@ -114,8 +132,13 @@ export function TellerPage() {
         <TillStat label="Cash in" value={formatMoney(session.cashIn, 'GHS')} tone="success" />
         <TillStat label="Cash out" value={formatMoney(session.cashOut, 'GHS')} tone="danger" />
         <TillStat label="Net position" value={formatMoney(net, 'GHS')} tone={net >= 0 ? 'success' : 'danger'} />
-        <div className="ml-auto flex items-center gap-1.5 text-xs text-slate-400">
-          <Clock size={13} /> {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+        <div className="ml-auto flex items-center gap-3">
+          <span className="flex items-center gap-1.5 text-xs text-slate-400">
+            <Clock size={13} /> {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+          </span>
+          {session.txns.length > 0 && (
+            <Button size="xs" variant="secondary" onClick={endSession}>End session</Button>
+          )}
         </div>
       </div>
 
@@ -247,27 +270,69 @@ export function TellerPage() {
             </Card>
           )}
 
-          {/* Session journal */}
+          {/* Journal: session + account history */}
           <Card>
-            <CardHeader title="Session journal" icon={Clock} subtitle={`${session.txns.length} posted this session`} />
-            <div className="divide-y divide-slate-100 max-h-[320px] overflow-y-auto scroll-thin">
-              {session.txns.length === 0 && <div className="p-5 text-sm text-slate-400 text-center">No transactions posted yet.</div>}
-              {session.txns.map((t) => {
-                const o = OPS.find((x) => x.key === t.op) || OPS[0];
-                return (
-                  <div key={t.transaction_id} className="flex items-center gap-3 px-4 py-2.5">
-                    <span className={cn('flex items-center justify-center w-8 h-8 rounded-lg shrink-0',
-                      t.op === 'deposit' ? 'bg-success-50 text-success-600' : t.op === 'withdrawal' ? 'bg-danger-50 text-danger-600' : 'bg-brand-50 text-brand-600')}>
-                      <o.icon size={15} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-slate-800 capitalize truncate">{t.op} · {t.party || '—'}</div>
-                      <div className="num text-2xs text-slate-400 truncate">{t.reference_number}</div>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+              <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+                <button type="button" onClick={() => setJournalTab('session')}
+                  className={cn('px-3 py-1.5 text-xs font-medium rounded-md transition-colors', journalTab === 'session' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                  Session ({session.txns.length})
+                </button>
+                <button type="button" onClick={() => setJournalTab('account')}
+                  className={cn('px-3 py-1.5 text-xs font-medium rounded-md transition-colors', journalTab === 'account' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                  Account history
+                </button>
+              </div>
+              {journalTab === 'account' && acctById[focusId] && (
+                <span className="text-2xs text-slate-400 truncate max-w-[120px]">{acctById[focusId].customer_name}</span>
+              )}
+            </div>
+            <div className="divide-y divide-slate-100 max-h-[360px] overflow-y-auto scroll-thin">
+              {journalTab === 'session' ? (
+                session.txns.length === 0 ? (
+                  <div className="p-5 text-sm text-slate-400 text-center">No transactions posted yet.</div>
+                ) : session.txns.map((t) => {
+                  const o = OPS.find((x) => x.key === t.op) || OPS[0];
+                  return (
+                    <div key={t.transaction_id} className="flex items-center gap-3 px-4 py-2.5">
+                      <span className={cn('flex items-center justify-center w-8 h-8 rounded-lg shrink-0',
+                        t.op === 'deposit' ? 'bg-success-50 text-success-600' : t.op === 'withdrawal' ? 'bg-danger-50 text-danger-600' : 'bg-brand-50 text-brand-600')}>
+                        <o.icon size={15} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium text-slate-800 capitalize truncate">{t.op} · {t.party || '—'}</div>
+                        <div className="num text-2xs text-slate-400 truncate">{t.reference_number}</div>
+                      </div>
+                      <div className="num text-sm font-semibold text-slate-800">{formatMoney(t.amount, t.currency)}</div>
                     </div>
-                    <div className="num text-sm font-semibold text-slate-800">{formatMoney(t.amount, t.currency)}</div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              ) : (
+                !focusId ? (
+                  <div className="p-5 text-sm text-slate-400 text-center">Select an account to view its transaction history.</div>
+                ) : history.loading ? (
+                  <div className="p-5 text-sm text-slate-400 text-center">Loading history…</div>
+                ) : (history.data || []).length === 0 ? (
+                  <div className="p-5 text-sm text-slate-400 text-center">No transactions on this account yet.</div>
+                ) : (history.data || []).map((t) => {
+                  const credit = t.to_account_id === focusId;
+                  return (
+                    <div key={t.transaction_id} className="flex items-center gap-3 px-4 py-2.5">
+                      <span className={cn('flex items-center justify-center w-8 h-8 rounded-lg shrink-0', credit ? 'bg-success-50 text-success-600' : 'bg-danger-50 text-danger-600')}>
+                        {credit ? <ArrowDownLeft size={15} /> : <ArrowUpRight size={15} />}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium text-slate-800 capitalize truncate">{t.transaction_type}</div>
+                        <div className="num text-2xs text-slate-400 truncate">{t.description || t.reference_number}</div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className={cn('num text-sm font-semibold', credit ? 'text-success-700' : 'text-slate-800')}>{credit ? '+' : '−'}{formatMoney(t.amount, t.currency)}</div>
+                        <StatusPill status={t.status} />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </Card>
         </div>

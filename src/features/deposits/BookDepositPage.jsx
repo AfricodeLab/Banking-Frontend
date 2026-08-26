@@ -7,6 +7,7 @@ import { PageHeader, Card, CardHeader, CardBody, Field, Input, Select, Button, u
 import { formatMoney, formatDate } from '../../lib/format.js';
 import { saveTD, maturity } from './tdStore.js';
 import { asList } from '../accounts/accountsData.js';
+import { BASE_CURRENCY, CURRENCIES } from '../../lib/config.js';
 
 export function BookDepositPage() {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ export function BookDepositPage() {
   const [form, setForm] = useState({
     customer_id: params.get('customer') || '',
     principal: '',
-    currency: 'USD',
+    currency: BASE_CURRENCY,
     tenor: '12',
     rate: '7.5',
     branch_id: '',
@@ -84,7 +85,7 @@ export function BookDepositPage() {
               </Field>
               <Field label="Currency" required>
                 <Select value={form.currency} onChange={set('currency')}>
-                  {['USD', 'GHS', 'EUR', 'GBP', 'NGN'].map((c) => <option key={c} value={c}>{c}</option>)}
+                  {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </Select>
               </Field>
               <Field label="Tenor (months)" required>

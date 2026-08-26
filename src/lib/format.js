@@ -1,12 +1,13 @@
 /** Formatting helpers for financial data. */
+import { BASE_CURRENCY } from './config.js';
 
-export function formatMoney(value, currency = 'USD', opts = {}) {
+export function formatMoney(value, currency = BASE_CURRENCY, opts = {}) {
   const n = typeof value === 'string' ? parseFloat(value) : value;
   if (n === null || n === undefined || Number.isNaN(n)) return '—';
   try {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: currency || 'USD',
+      currency: currency || BASE_CURRENCY,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
       ...opts,
@@ -48,6 +49,13 @@ export function relativeTime(value) {
 /** Two-letter initials from a name. */
 export function initials(name = '') {
   return name.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() || '').join('') || '?';
+}
+
+/** Mask a card number for display: •••• •••• •••• 1234 */
+export function maskCard(number = '') {
+  const s = String(number).replace(/\s/g, '');
+  if (s.length < 4) return '•••• ' + s;
+  return `•••• •••• •••• ${s.slice(-4)}`;
 }
 
 /** Shorten a UUID for display: a1b2c3d4… */

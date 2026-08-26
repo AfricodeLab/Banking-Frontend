@@ -58,6 +58,15 @@ export const BranchApi = {
   stats: () => api.get('/branches/stats'),
 };
 
+export const CardApi = {
+  byAccount: (accountId) => api.get(`/accounts/${accountId}/cards`),
+  issue: (accountId, payload) => api.post(`/accounts/${accountId}/cards`, payload),
+  block: (id) => api.put(`/cards/${id}/block`, {}),
+  unblock: (id) => api.put(`/cards/${id}/unblock`, {}),
+  updateStatus: (id, status) => api.put(`/cards/${id}/status`, { status }),
+  stats: () => api.get('/cards/stats'),
+};
+
 export const RoleApi = {
   list: () => api.get('/roles'),
 };

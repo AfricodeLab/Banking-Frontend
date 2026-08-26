@@ -36,6 +36,9 @@ export function AuthProvider({ children }) {
     saveUser(null);
     setTok(null);
     setUser(null);
+    // Clear any per-session state (e.g. the teller till journal) so nothing leaks
+    // to the next operator on a shared terminal.
+    try { sessionStorage.clear(); } catch { /* ignore */ }
   };
 
   useEffect(() => { saveUser(user); }, [user]);

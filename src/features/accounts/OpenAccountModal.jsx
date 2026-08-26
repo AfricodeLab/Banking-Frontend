@@ -3,6 +3,7 @@ import { AccountApi, CustomerApi, BranchApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
 import { Modal, Field, Select, Button, useToast } from '../../components/ui/index.js';
 import { asList } from './accountsData.js';
+import { BASE_CURRENCY, CURRENCIES } from '../../lib/config.js';
 
 export function OpenAccountModal({ open, onClose, onCreated, presetCustomerId }) {
   const toast = useToast();
@@ -12,7 +13,7 @@ export function OpenAccountModal({ open, onClose, onCreated, presetCustomerId })
   const [form, setForm] = useState({
     customer_id: presetCustomerId || '',
     account_type: 'savings',
-    currency: 'USD',
+    currency: BASE_CURRENCY,
     branch_id: '',
   });
   const [saving, setSaving] = useState(false);
@@ -68,7 +69,7 @@ export function OpenAccountModal({ open, onClose, onCreated, presetCustomerId })
           </Field>
           <Field label="Currency" required>
             <Select value={form.currency} onChange={set('currency')}>
-              {['USD', 'GHS', 'EUR', 'GBP', 'NGN'].map((c) => <option key={c} value={c}>{c}</option>)}
+              {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </Select>
           </Field>
         </div>

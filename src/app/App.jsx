@@ -20,8 +20,10 @@ import { DepositsListPage } from '../features/deposits/DepositsListPage.jsx';
 import { BookDepositPage } from '../features/deposits/BookDepositPage.jsx';
 import { CompliancePage } from '../features/compliance/CompliancePage.jsx';
 import { BranchesListPage } from '../features/branches/BranchesListPage.jsx';
+import { CardsPage } from '../features/cards/CardsPage.jsx';
+import { TransactionsPage } from '../features/transactions/TransactionsPage.jsx';
 import {
-  PaymentsPage, TransactionsPage, FxPage, CardsPage,
+  PaymentsPage, FxPage,
   UsersPage, AuditPage, ReportsPage, NotFoundPage,
 } from '../features/scaffolds.jsx';
 
