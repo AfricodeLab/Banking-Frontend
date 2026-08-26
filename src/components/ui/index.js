@@ -13,3 +13,4 @@ export { MiniBars } from './MiniBars.jsx';
 export { Pagination } from './Pagination.jsx';
 export { BarChart } from './BarChart.jsx';
 export { ToastProvider, useToast } from './Toast.jsx';
+export { ConfirmProvider, useConfirm } from './Confirm.jsx';

@@ -3,7 +3,7 @@ import { CreditCard, Plus, Search, Nfc, Lock, LockOpen, ShieldCheck } from 'luci
 import { CardApi, AccountApi, CustomerApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
 import { loadAllAccounts, asList } from '../accounts/accountsData.js';
-import { PageHeader, Card, Button, Input, StatCard, Badge, StatusPill, Modal, Field, Select, EmptyState, Spinner, useToast } from '../../components/ui/index.js';
+import { PageHeader, Card, Button, Input, StatCard, Badge, StatusPill, Modal, Field, Select, EmptyState, Spinner, useToast, useConfirm } from '../../components/ui/index.js';
 import { formatMoney, maskCard, formatDate } from '../../lib/format.js';
 import { cn } from '../../lib/cn.js';
 
@@ -21,6 +21,7 @@ async function loadAllCards() {
 
 export function CardsPage() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const [busyId, setBusyId] = useState(null);
@@ -37,8 +38,17 @@ export function CardsPage() {
   const blocked = cards.filter((c) => String(c.status).toLowerCase() === 'blocked').length;
 
   const toggleBlock = async (c) => {
-    setBusyId(c.card_id);
     const blockedNow = String(c.status).toLowerCase() === 'blocked';
+    const ok = await confirm({
+      title: blockedNow ? 'Unblock card?' : 'Block card?',
+      message: blockedNow
+        ? `Reactivate card ${maskCard(c.card_number)} for ${c.customer_name}?`
+        : `Block card ${maskCard(c.card_number)}? ${c.customer_name} won't be able to transact until it's unblocked.`,
+      confirmLabel: blockedNow ? 'Unblock' : 'Block card',
+      tone: blockedNow ? 'primary' : 'danger',
+    });
+    if (!ok) return;
+    setBusyId(c.card_id);
     try {
       await (blockedNow ? CardApi.unblock(c.card_id) : CardApi.block(c.card_id));
       toast.success(blockedNow ? 'Card unblocked' : 'Card blocked');

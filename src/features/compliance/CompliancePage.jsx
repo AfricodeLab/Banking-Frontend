@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, ShieldAlert, Search, Check, Eye, Ban, Clock, UserCheck } from 'lucide-react';
 import { CustomerApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
-import { PageHeader, Card, DataTable, StatusPill, Badge, Button, Input, StatCard, useToast } from '../../components/ui/index.js';
+import { PageHeader, Card, DataTable, StatusPill, Badge, Button, Input, StatCard, useToast, useConfirm } from '../../components/ui/index.js';
 import { formatDate, initials } from '../../lib/format.js';
 import { asList } from '../accounts/accountsData.js';
 import { cn } from '../../lib/cn.js';
@@ -20,6 +20,7 @@ const RISK_TONE = { low: 'success', medium: 'warning', high: 'danger', critical:
 export function CompliancePage() {
   const navigate = useNavigate();
   const toast = useToast();
+  const confirm = useConfirm();
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('queue');
   const [busyId, setBusyId] = useState(null);
@@ -46,6 +47,13 @@ export function CompliancePage() {
   }, [customers, filter, q]);
 
   const act = async (c, status, label) => {
+    const ok = await confirm({
+      title: `Mark ${c.name} as ${label}?`,
+      message: `Set this customer's KYC status to “${status}”. This affects their ability to transact.`,
+      confirmLabel: label.charAt(0).toUpperCase() + label.slice(1),
+      tone: status === 'verified' ? 'primary' : 'warning',
+    });
+    if (!ok) return;
     setBusyId(c.customer_id);
     try {
       await CustomerApi.update(c.customer_id, { kyc_status: status });

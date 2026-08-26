@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, Wallet, ShieldCheck, Plus, Calendar, Landmark, Users } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, Wallet, ShieldCheck, Plus, Calendar, Landmark, Users, Pencil } from 'lucide-react';
 import { CustomerApi, AccountApi, LoanApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
 import { Card, CardHeader, Tabs, StatusPill, Button, DataTable, Spinner, Badge } from '../../components/ui/index.js';
@@ -75,6 +75,7 @@ export function CustomerDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <Button variant="secondary" onClick={() => navigate(`/customers/${id}/edit`)} icon={Pencil}>Edit</Button>
             <Button variant="secondary" onClick={() => navigate(`/loans/new?customer=${id}`)} icon={Landmark}>New loan</Button>
             <Button onClick={() => setOpenAcct(true)} icon={Plus}>Open account</Button>
           </div>

@@ -3,7 +3,7 @@ import { Repeat, ArrowRightLeft, TrendingUp, Search, Info, RefreshCw, SlidersHor
 import { ExchangeRateApi, FxRateApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
 import { CURRENCIES } from '../../lib/config.js';
-import { PageHeader, Card, CardHeader, CardBody, Field, Select, Input, Button, DataTable, Badge, Spinner, useToast } from '../../components/ui/index.js';
+import { PageHeader, Card, CardHeader, CardBody, Field, Select, Input, Button, DataTable, Badge, Spinner, useToast, useConfirm } from '../../components/ui/index.js';
 import { formatNumber, formatDate, formatDateTime } from '../../lib/format.js';
 import { cn } from '../../lib/cn.js';
 
@@ -134,6 +134,7 @@ export function FxPage() {
 
 function BoardRatesCard({ codes, rates, loading, onChange }) {
   const toast = useToast();
+  const confirm = useConfirm();
   const [form, setForm] = useState({ base_currency: 'USD', quote_currency: 'GHS', rate: '' });
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -154,6 +155,8 @@ function BoardRatesCard({ codes, rates, loading, onChange }) {
 
   const editRow = (row) => setForm({ base_currency: row.base_currency, quote_currency: row.quote_currency, rate: String(row.rate) });
   const remove = async (row) => {
+    const ok = await confirm({ title: 'Remove board rate?', message: `Remove the ${row.base_currency}→${row.quote_currency} board rate? Conversions for this pair will fall back to the market feed.`, confirmLabel: 'Remove', tone: 'danger' });
+    if (!ok) return;
     try { await FxRateApi.remove(row.rate_id); toast.success('Board rate removed'); onChange?.(); }
     catch (err) { toast.error(err?.message || 'Could not remove'); }
   };

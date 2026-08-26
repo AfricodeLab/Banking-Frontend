@@ -9,7 +9,7 @@ import { useAsync } from '../../lib/useAsync.js';
 import { usePagedList } from '../../lib/usePagedList.js';
 import { useAuth } from '../../lib/auth/AuthContext.jsx';
 import { loadAllAccounts, asList } from '../accounts/accountsData.js';
-import { PageHeader, Card, CardHeader, Field, Select, Input, Button, StatusPill, Badge, useToast } from '../../components/ui/index.js';
+import { PageHeader, Card, CardHeader, Field, Select, Input, Button, StatusPill, Badge, useToast, useConfirm } from '../../components/ui/index.js';
 import { formatMoney } from '../../lib/format.js';
 import { cn } from '../../lib/cn.js';
 
@@ -29,6 +29,7 @@ const NOTES = {
 
 export function TellerPage() {
   const toast = useToast();
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [params] = useSearchParams();
@@ -95,6 +96,15 @@ export function TellerPage() {
     if (op !== 'withdrawal' && !to) return toast.error('Select the destination account');
     if (op === 'transfer' && from === to) return toast.error('Source and destination must differ');
     if (debitAcct && parseFloat(debitAcct.balance || 0) < amt) return toast.error('Insufficient funds in source account');
+
+    const party = cashAcct?.customer_name || (op === 'transfer' ? `${debitAcct?.customer_name || '—'} → ${creditAcct?.customer_name || '—'}` : '—');
+    const ok = await confirm({
+      title: `Confirm ${activeOp.label.toLowerCase()}`,
+      message: `Post a ${op} of ${formatMoney(amt, ccy)} — ${party}? This is posted to the ledger immediately.`,
+      confirmLabel: `Post ${activeOp.label.toLowerCase()}`,
+      tone: 'warning',
+    });
+    if (!ok) return;
 
     const payload = { amount: String(amt.toFixed(2)), transaction_type: op, description: desc || activeOp.label };
     if (op !== 'deposit') payload.from_account_id = from;

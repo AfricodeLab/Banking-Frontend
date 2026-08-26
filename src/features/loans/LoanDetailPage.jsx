@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Landmark, Calculator, CalendarClock, User, HandCoins, CheckCircle2 } from 'lucide-react';
 import { LoanApi, CustomerApi, AccountApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
-import { Card, CardHeader, CardBody, Tabs, StatusPill, Badge, Button, DataTable, Spinner, Modal, Field, Input, Select, useToast } from '../../components/ui/index.js';
+import { Card, CardHeader, CardBody, Tabs, StatusPill, Badge, Button, DataTable, Spinner, Modal, Field, Input, Select, useToast, useConfirm } from '../../components/ui/index.js';
 import { formatMoney } from '../../lib/format.js';
 import { buildSchedule } from './loanCalc.js';
 import { asList } from '../accounts/accountsData.js';
@@ -13,6 +13,7 @@ export function LoanDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const confirm = useConfirm();
   const [tab, setTab] = useState('overview');
   const [payOpen, setPayOpen] = useState(false);
 
@@ -37,6 +38,13 @@ export function LoanDetailPage() {
   const isActive = String(loan.status).toLowerCase() === 'active';
 
   const setStatus = async (status) => {
+    const ok = await confirm({
+      title: status === 'closed' ? 'Close loan?' : 'Reopen loan?',
+      message: status === 'closed' ? 'Mark this loan as closed? This ends servicing on the account.' : 'Reopen this loan for servicing?',
+      confirmLabel: status === 'closed' ? 'Close loan' : 'Reopen',
+      tone: status === 'closed' ? 'danger' : 'primary',
+    });
+    if (!ok) return;
     try { await LoanApi.updateStatus(id, status); toast.success(`Loan ${status}`); summary.reload(); }
     catch (err) { toast.error(err?.message || 'Could not update status'); }
   };

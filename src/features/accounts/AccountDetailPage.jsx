@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Wallet, Receipt, CreditCard, Banknote, Snowflake, Power, ArrowDownLeft, ArrowUpRight, User } from 'lucide-react';
+import { ArrowLeft, Wallet, Receipt, CreditCard, Banknote, Snowflake, Power, ArrowDownLeft, ArrowUpRight, User, FileText } from 'lucide-react';
 import { AccountApi, TransactionApi, CustomerApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
-import { Card, CardHeader, Tabs, StatusPill, Badge, Button, DataTable, Spinner, useToast } from '../../components/ui/index.js';
+import { Card, CardHeader, Tabs, StatusPill, Badge, Button, DataTable, Spinner, useToast, useConfirm } from '../../components/ui/index.js';
 import { formatMoney, formatDateTime, formatDate } from '../../lib/format.js';
 import { asList } from './accountsData.js';
 import { useLeafCrumb } from '../../components/layout/Breadcrumbs.jsx';
@@ -12,6 +12,7 @@ export function AccountDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const confirm = useConfirm();
   const [tab, setTab] = useState('transactions');
   const [busy, setBusy] = useState(false);
 
@@ -27,6 +28,16 @@ export function AccountDetailPage() {
   useLeafCrumb(a ? `${a.account_type} ••${(a.account_id || '').slice(-4)}` : null);
 
   const changeStatus = async (status) => {
+    const freezing = status === 'frozen';
+    const ok = await confirm({
+      title: freezing ? 'Freeze account?' : 'Activate account?',
+      message: freezing
+        ? 'Freezing blocks all debits and credits on this account until it is reactivated.'
+        : 'Reactivate this account so it can transact again?',
+      confirmLabel: freezing ? 'Freeze' : 'Activate',
+      tone: freezing ? 'danger' : 'primary',
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await AccountApi.updateStatus(id, status);
@@ -110,6 +121,7 @@ export function AccountDetailPage() {
             <div className="num text-3xl font-semibold text-slate-900 leading-tight">{formatMoney(a.balance, a.currency)}</div>
           </div>
           <div className="flex items-center gap-2 lg:pl-5 lg:border-l border-slate-100">
+            <Button variant="secondary" icon={FileText} onClick={() => navigate(`/accounts/${a.account_id}/statement`)}>Statement</Button>
             <Button icon={Banknote} onClick={() => navigate(`/teller?account=${a.account_id}`)}>Teller</Button>
             {isActive ? (
               <Button variant="secondary" icon={Snowflake} loading={busy} onClick={() => changeStatus('frozen')}>Freeze</Button>

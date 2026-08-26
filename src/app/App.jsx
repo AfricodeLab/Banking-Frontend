@@ -1,7 +1,7 @@
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '../lib/auth/AuthContext.jsx';
-import { ToastProvider } from '../components/ui/index.js';
+import { ToastProvider, ConfirmProvider } from '../components/ui/index.js';
 import { AppShell } from '../components/layout/AppShell.jsx';
 import { RequireAuth } from './RequireAuth.jsx';
 
@@ -12,6 +12,7 @@ import { CustomerCreatePage } from '../features/customers/CustomerCreatePage.jsx
 import { CustomerDetailPage } from '../features/customers/CustomerDetailPage.jsx';
 import { AccountsListPage } from '../features/accounts/AccountsListPage.jsx';
 import { AccountDetailPage } from '../features/accounts/AccountDetailPage.jsx';
+import { StatementPage } from '../features/accounts/StatementPage.jsx';
 import { TellerPage } from '../features/teller/TellerPage.jsx';
 import { LoansListPage } from '../features/loans/LoansListPage.jsx';
 import { LoanCreatePage } from '../features/loans/LoanCreatePage.jsx';
@@ -34,6 +35,7 @@ export default function App() {
   return (
     <AuthProvider>
       <ToastProvider>
+        <ConfirmProvider>
         <HashRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
@@ -42,9 +44,11 @@ export default function App() {
               <Route index element={<DashboardPage />} />
               <Route path="customers" element={<CustomerListPage />} />
               <Route path="customers/new" element={<CustomerCreatePage />} />
+              <Route path="customers/:id/edit" element={<CustomerCreatePage />} />
               <Route path="customers/:id" element={<CustomerDetailPage />} />
               <Route path="accounts" element={<AccountsListPage />} />
               <Route path="accounts/:id" element={<AccountDetailPage />} />
+              <Route path="accounts/:id/statement" element={<StatementPage />} />
               <Route path="cards" element={<CardsPage />} />
               <Route path="teller" element={<TellerPage />} />
               <Route path="payments" element={<PaymentsPage />} />
@@ -66,6 +70,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </HashRouter>
+        </ConfirmProvider>
       </ToastProvider>
     </AuthProvider>
   );

@@ -7,12 +7,13 @@ import {
 import { TransactionApi, BeneficiaryApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
 import { loadAllAccounts, asList } from '../accounts/accountsData.js';
-import { PageHeader, Card, CardHeader, Field, Select, Input, Button, Badge, StatusPill, Modal, EmptyState, useToast } from '../../components/ui/index.js';
+import { PageHeader, Card, CardHeader, Field, Select, Input, Button, Badge, StatusPill, Modal, EmptyState, useToast, useConfirm } from '../../components/ui/index.js';
 import { formatMoney, formatDateTime, initials, maskCard } from '../../lib/format.js';
 import { cn } from '../../lib/cn.js';
 
 export function PaymentsPage() {
   const toast = useToast();
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const accountsQ = useAsync(() => loadAllAccounts(), []);
   const accounts = accountsQ.data || [];
@@ -47,6 +48,14 @@ export function PaymentsPage() {
     if (selectedBen.account_number === fromId) return toast.error('Source and destination must differ');
     if (parseFloat(fromAcct.balance || 0) < amt) return toast.error('Insufficient funds');
 
+    const ok = await confirm({
+      title: 'Confirm payment',
+      message: `Send ${formatMoney(amt, fromAcct.currency)} from ${fromAcct.customer_name}'s ${fromAcct.account_type} account to ${selectedBen.name}? This posts to the ledger and cannot be reversed here.`,
+      confirmLabel: 'Send payment',
+      tone: 'warning',
+    });
+    if (!ok) return;
+
     setBusy(true);
     try {
       const txn = await TransactionApi.create({
@@ -66,6 +75,8 @@ export function PaymentsPage() {
   };
 
   const removeBen = async (b) => {
+    const ok = await confirm({ title: 'Remove beneficiary?', message: `Remove ${b.name} from saved beneficiaries?`, confirmLabel: 'Remove', tone: 'danger' });
+    if (!ok) return;
     try { await BeneficiaryApi.remove(b.beneficiary_id); toast.success('Beneficiary removed'); if (benId === b.beneficiary_id) setBenId(''); beneficiaries.reload(); }
     catch (err) { toast.error(err?.message || 'Could not remove'); }
   };

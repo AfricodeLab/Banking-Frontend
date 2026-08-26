@@ -1,5 +1,5 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, UserPlus, IdCard, MapPin, Briefcase, Users, ShieldCheck, FileText,
   Check, Paperclip, X, ReceiptText,
@@ -22,16 +22,35 @@ const EMPTY = {
   kyc_status: 'pending', risk_rating: 'low', branch_id: '',
 };
 
+const dstr = (v) => { const s = String(v || '').slice(0, 10); return s.startsWith('0001') ? '' : s; };
+
 export function CustomerCreatePage() {
   const navigate = useNavigate();
   const toast = useToast();
+  const { id } = useParams();
+  const isEdit = !!id;
   const branches = useAsync(() => BranchApi.list().then(asList), []);
+  const existing = useAsync(() => (id ? CustomerApi.get(id) : Promise.resolve(null)), [id], { immediate: !!id });
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [docs, setDocs] = useState({ id: null, poa: null });
   const idFileRef = useRef(null);
   const poaFileRef = useRef(null);
+
+  // Prefill from the existing customer when editing.
+  useEffect(() => {
+    const c = existing.data;
+    if (!c) return;
+    setForm({
+      ...EMPTY,
+      ...Object.fromEntries(Object.keys(EMPTY).map((k) => [k, c[k] ?? EMPTY[k]])),
+      dob: dstr(c.dob),
+      id_expiry: dstr(c.id_expiry),
+      proof_of_address_date: dstr(c.proof_of_address_date),
+      monthly_income: c.monthly_income ? String(c.monthly_income) : '',
+    });
+  }, [existing.data]);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -52,11 +71,18 @@ export function CustomerCreatePage() {
     setSaving(true);
     try {
       const name = [form.first_name, form.middle_name, form.last_name].map((s) => s.trim()).filter(Boolean).join(' ');
-      const created = await CustomerApi.create({ ...form, name, monthly_income: parseFloat(form.monthly_income) || 0 });
-      toast.success('Customer onboarded', { title: created.name });
-      navigate(`/customers/${created.customer_id}`);
+      const payload = { ...form, name, monthly_income: parseFloat(form.monthly_income) || 0 };
+      if (isEdit) {
+        await CustomerApi.update(id, payload);
+        toast.success('Customer updated', { title: name });
+        navigate(`/customers/${id}`);
+      } else {
+        const created = await CustomerApi.create(payload);
+        toast.success('Customer onboarded', { title: created.name });
+        navigate(`/customers/${created.customer_id}`);
+      }
     } catch (err) {
-      toast.error(err?.message || 'Could not create customer');
+      toast.error(err?.message || (isEdit ? 'Could not update customer' : 'Could not create customer'));
     } finally { setSaving(false); }
   };
 
@@ -81,10 +107,10 @@ export function CustomerCreatePage() {
 
   return (
     <div>
-      <button onClick={() => navigate('/customers')} className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-3">
-        <ArrowLeft size={15} /> Back to customers
+      <button onClick={() => navigate(isEdit ? `/customers/${id}` : '/customers')} className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-3">
+        <ArrowLeft size={15} /> {isEdit ? 'Back to customer' : 'Back to customers'}
       </button>
-      <PageHeader title="Onboard customer" description="Create a Customer Information File (CIF) with full KYC details" />
+      <PageHeader title={isEdit ? 'Edit customer' : 'Onboard customer'} description={isEdit ? 'Update the Customer Information File (CIF)' : 'Create a Customer Information File (CIF) with full KYC details'} />
 
       <form onSubmit={submit} className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-4 items-start">
         {/* LEFT — form sections */}
@@ -232,7 +258,7 @@ export function CustomerCreatePage() {
 
           <div className="flex items-center justify-end gap-2 pb-2">
             <Button type="button" variant="secondary" onClick={() => navigate('/customers')}>Cancel</Button>
-            <Button type="submit" icon={UserPlus} loading={saving}>Create customer</Button>
+            <Button type="submit" icon={UserPlus} loading={saving}>{isEdit ? 'Save changes' : 'Create customer'}</Button>
           </div>
         </div>
 
