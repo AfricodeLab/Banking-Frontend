@@ -35,6 +35,14 @@ module.exports = {
         // 9000 (default loggerPort) is used by MinIO on this machine; move to free ports.
         port: 3017,
         loggerPort: 9017,
+        // Allow the renderer to call the Go backend (:8080) and keep HMR working.
+        devContentSecurityPolicy:
+          "default-src 'self' 'unsafe-inline' data: blob:; " +
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+          "style-src 'self' 'unsafe-inline'; " +
+          "font-src 'self' data:; " +
+          "img-src 'self' data: blob: https:; " +
+          "connect-src 'self' http://localhost:8080 ws://localhost:3017 ws://localhost:9017;",
         mainConfig: './webpack.main.config.js',
         renderer: {
           config: './webpack.renderer.config.js',
