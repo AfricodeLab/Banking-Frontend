@@ -5,7 +5,11 @@
  * - Parses JSON responses
  */
 
-export const API_BASE_URL = 'http://localhost:8080';
+// Backend base URL. Override at build/run time with API_BASE_URL; defaults to the
+// local core-banking server. (Runs on :8090 — :8080 hosts the legacy instance.)
+export const API_BASE_URL =
+  (typeof process !== 'undefined' && process.env && process.env.API_BASE_URL) ||
+  'http://localhost:8090';
 
 const TOKEN_KEY = 'nb.token';
 
@@ -50,7 +54,7 @@ async function request(method, path, { body, params, auth = true, signal } = {})
     });
   } catch (err) {
     throw new ApiError(
-      'Cannot reach the banking server. Is the backend running on :8080?',
+      `Cannot reach the banking server at ${API_BASE_URL}. Is the backend running?`,
       0,
       { cause: String(err) },
     );
