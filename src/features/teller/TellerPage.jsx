@@ -6,9 +6,9 @@ import {
 } from 'lucide-react';
 import { TransactionApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
+import { usePagedList } from '../../lib/usePagedList.js';
 import { useAuth } from '../../lib/auth/AuthContext.jsx';
 import { loadAllAccounts, asList } from '../accounts/accountsData.js';
-import { loadTellerSession, saveTellerSession, clearTellerSession } from './tellerSession.js';
 import { PageHeader, Card, CardHeader, Field, Select, Input, Button, StatusPill, Badge, useToast } from '../../components/ui/index.js';
 import { formatMoney } from '../../lib/format.js';
 import { cn } from '../../lib/cn.js';
@@ -35,31 +35,40 @@ export function TellerPage() {
   const { data, loading, reload } = useAsync(() => loadAllAccounts(), []);
   const accounts = data || [];
 
-  const persisted = useMemo(() => loadTellerSession(), []);
-  const [op, setOp] = useState(persisted.op);
-  const [from, setFrom] = useState(persisted.from);
-  const [to, setTo] = useState(params.get('account') || persisted.to);
+  const [op, setOp] = useState('deposit');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState(params.get('account') || '');
   const [amount, setAmount] = useState('');
   const [desc, setDesc] = useState('');
   const [denoms, setDenoms] = useState({});
   const [busy, setBusy] = useState(false);
   const [receipt, setReceipt] = useState(null);
-  const [session, setSession] = useState(persisted.session);
   const [journalTab, setJournalTab] = useState('session');
 
-  // Persist the working session so it survives navigation / reloads.
-  useEffect(() => { saveTellerSession({ op, from, to, session }); }, [op, from, to, session]);
+  // Teller session is server-derived and paginated: this teller's own transactions for today,
+  // attributed by teller_id on the backend. Aggregates (count + cash) come over the full day.
+  const tellerSession = usePagedList(
+    (offset, limit) => TransactionApi.tellerToday({ limit, offset }).then((r) => ({
+      items: r.transactions || [],
+      total: r.count ?? 0,
+      meta: { cashIn: Number(r.cash_in || 0), cashOut: Number(r.cash_out || 0) },
+    })),
+    [],
+    { pageSize: 15 },
+  );
+  const cashIn = tellerSession.meta?.cashIn || 0;
+  const cashOut = tellerSession.meta?.cashOut || 0;
+  const sessionCount = tellerSession.total || 0;
 
-  const endSession = () => {
-    clearTellerSession();
-    setSession({ txns: [], cashIn: 0, cashOut: 0 });
-    setReceipt(null);
-    toast.success('Till session ended');
-  };
-
-  // History for the account currently in focus (destination, else source).
+  // Account history for the account currently in focus (destination, else source) — paginated.
   const focusId = to || from;
-  const history = useAsync(() => (focusId ? TransactionApi.byAccount(focusId).then(asList) : Promise.resolve([])), [focusId]);
+  const history = usePagedList(
+    (offset, limit) => (focusId
+      ? TransactionApi.byAccount(focusId, { limit, offset }).then((r) => ({ items: asList(r), total: null }))
+      : Promise.resolve({ items: [], total: 0 })),
+    [focusId],
+    { pageSize: 12 },
+  );
 
   useEffect(() => {
     const preset = params.get('account');
@@ -96,13 +105,9 @@ export function TellerPage() {
       const txn = await TransactionApi.create(payload);
       toast.success(`${activeOp.label} posted`, { title: formatMoney(amt, ccy) });
       setReceipt({ ...txn, party: cashAcct?.customer_name });
-      setSession((s) => ({
-        txns: [{ ...txn, party: cashAcct?.customer_name, op }, ...s.txns].slice(0, 20),
-        cashIn: s.cashIn + (op === 'deposit' ? amt : 0),
-        cashOut: s.cashOut + (op === 'withdrawal' ? amt : 0),
-      }));
       setAmount(''); setDesc(''); setDenoms({});
       await reload();
+      tellerSession.reload();
       history.reload();
     } catch (err) {
       toast.error(err?.message || 'Transaction failed');
@@ -113,7 +118,13 @@ export function TellerPage() {
     <option value={a.account_id}>{a.customer_name} · {a.account_type} · {a.currency} · {formatMoney(a.balance, a.currency)}</option>
   );
 
-  const net = session.cashIn - session.cashOut;
+  const net = cashIn - cashOut;
+
+  // Enrich the server-derived journal with customer names from the loaded account list.
+  const journalTxns = tellerSession.items.map((t) => ({
+    ...t,
+    party: acctById[t.to_account_id]?.customer_name || acctById[t.from_account_id]?.customer_name || null,
+  }));
 
   return (
     <div>
@@ -128,17 +139,12 @@ export function TellerPage() {
             <div className="text-2xs text-slate-400 flex items-center gap-1"><CircleUser size={11} /> {user?.first_name ? `${user.first_name} ${user.last_name || ''}` : user?.username}</div>
           </div>
         </div>
-        <TillStat label="Session txns" value={session.txns.length} />
-        <TillStat label="Cash in" value={formatMoney(session.cashIn, 'GHS')} tone="success" />
-        <TillStat label="Cash out" value={formatMoney(session.cashOut, 'GHS')} tone="danger" />
+        <TillStat label="Session txns" value={sessionCount} />
+        <TillStat label="Cash in" value={formatMoney(cashIn, 'GHS')} tone="success" />
+        <TillStat label="Cash out" value={formatMoney(cashOut, 'GHS')} tone="danger" />
         <TillStat label="Net position" value={formatMoney(net, 'GHS')} tone={net >= 0 ? 'success' : 'danger'} />
-        <div className="ml-auto flex items-center gap-3">
-          <span className="flex items-center gap-1.5 text-xs text-slate-400">
-            <Clock size={13} /> {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-          </span>
-          {session.txns.length > 0 && (
-            <Button size="xs" variant="secondary" onClick={endSession}>End session</Button>
-          )}
+        <div className="ml-auto flex items-center gap-1.5 text-xs text-slate-400">
+          <Clock size={13} /> {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
         </div>
       </div>
 
@@ -276,7 +282,7 @@ export function TellerPage() {
               <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
                 <button type="button" onClick={() => setJournalTab('session')}
                   className={cn('px-3 py-1.5 text-xs font-medium rounded-md transition-colors', journalTab === 'session' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
-                  Session ({session.txns.length})
+                  My session ({sessionCount})
                 </button>
                 <button type="button" onClick={() => setJournalTab('account')}
                   className={cn('px-3 py-1.5 text-xs font-medium rounded-md transition-colors', journalTab === 'account' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
@@ -289,49 +295,71 @@ export function TellerPage() {
             </div>
             <div className="divide-y divide-slate-100 max-h-[360px] overflow-y-auto scroll-thin">
               {journalTab === 'session' ? (
-                session.txns.length === 0 ? (
-                  <div className="p-5 text-sm text-slate-400 text-center">No transactions posted yet.</div>
-                ) : session.txns.map((t) => {
-                  const o = OPS.find((x) => x.key === t.op) || OPS[0];
-                  return (
-                    <div key={t.transaction_id} className="flex items-center gap-3 px-4 py-2.5">
-                      <span className={cn('flex items-center justify-center w-8 h-8 rounded-lg shrink-0',
-                        t.op === 'deposit' ? 'bg-success-50 text-success-600' : t.op === 'withdrawal' ? 'bg-danger-50 text-danger-600' : 'bg-brand-50 text-brand-600')}>
-                        <o.icon size={15} />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium text-slate-800 capitalize truncate">{t.op} · {t.party || '—'}</div>
-                        <div className="num text-2xs text-slate-400 truncate">{t.reference_number}</div>
-                      </div>
-                      <div className="num text-sm font-semibold text-slate-800">{formatMoney(t.amount, t.currency)}</div>
-                    </div>
-                  );
-                })
+                tellerSession.loading ? (
+                  <div className="p-5 text-sm text-slate-400 text-center">Loading your session…</div>
+                ) : journalTxns.length === 0 ? (
+                  <div className="p-5 text-sm text-slate-400 text-center">No transactions posted by you today.</div>
+                ) : (
+                  <>
+                    {journalTxns.map((t) => {
+                      const o = OPS.find((x) => x.key === t.transaction_type) || OPS[0];
+                      return (
+                        <div key={t.transaction_id} className="flex items-center gap-3 px-4 py-2.5">
+                          <span className={cn('flex items-center justify-center w-8 h-8 rounded-lg shrink-0',
+                            t.transaction_type === 'deposit' ? 'bg-success-50 text-success-600' : t.transaction_type === 'withdrawal' ? 'bg-danger-50 text-danger-600' : 'bg-brand-50 text-brand-600')}>
+                            <o.icon size={15} />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-medium text-slate-800 capitalize truncate">{t.transaction_type} · {t.party || '—'}</div>
+                            <div className="num text-2xs text-slate-400 truncate">{t.reference_number}</div>
+                          </div>
+                          <div className="num text-sm font-semibold text-slate-800">{formatMoney(t.amount, t.currency)}</div>
+                        </div>
+                      );
+                    })}
+                    {tellerSession.hasMore && (
+                      <button type="button" onClick={tellerSession.loadMore} disabled={tellerSession.loadingMore}
+                        className="w-full py-2.5 text-xs font-medium text-brand-600 hover:bg-brand-50 disabled:text-slate-300">
+                        {tellerSession.loadingMore ? 'Loading…' : `Load more · ${sessionCount - journalTxns.length} more`}
+                      </button>
+                    )}
+                  </>
+                )
               ) : (
                 !focusId ? (
                   <div className="p-5 text-sm text-slate-400 text-center">Select an account to view its transaction history.</div>
                 ) : history.loading ? (
                   <div className="p-5 text-sm text-slate-400 text-center">Loading history…</div>
-                ) : (history.data || []).length === 0 ? (
+                ) : history.items.length === 0 ? (
                   <div className="p-5 text-sm text-slate-400 text-center">No transactions on this account yet.</div>
-                ) : (history.data || []).map((t) => {
-                  const credit = t.to_account_id === focusId;
-                  return (
-                    <div key={t.transaction_id} className="flex items-center gap-3 px-4 py-2.5">
-                      <span className={cn('flex items-center justify-center w-8 h-8 rounded-lg shrink-0', credit ? 'bg-success-50 text-success-600' : 'bg-danger-50 text-danger-600')}>
-                        {credit ? <ArrowDownLeft size={15} /> : <ArrowUpRight size={15} />}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium text-slate-800 capitalize truncate">{t.transaction_type}</div>
-                        <div className="num text-2xs text-slate-400 truncate">{t.description || t.reference_number}</div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <div className={cn('num text-sm font-semibold', credit ? 'text-success-700' : 'text-slate-800')}>{credit ? '+' : '−'}{formatMoney(t.amount, t.currency)}</div>
-                        <StatusPill status={t.status} />
-                      </div>
-                    </div>
-                  );
-                })
+                ) : (
+                  <>
+                    {history.items.map((t) => {
+                      const credit = t.to_account_id === focusId;
+                      return (
+                        <div key={t.transaction_id} className="flex items-center gap-3 px-4 py-2.5">
+                          <span className={cn('flex items-center justify-center w-8 h-8 rounded-lg shrink-0', credit ? 'bg-success-50 text-success-600' : 'bg-danger-50 text-danger-600')}>
+                            {credit ? <ArrowDownLeft size={15} /> : <ArrowUpRight size={15} />}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-medium text-slate-800 capitalize truncate">{t.transaction_type}</div>
+                            <div className="num text-2xs text-slate-400 truncate">{t.description || t.reference_number}</div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <div className={cn('num text-sm font-semibold', credit ? 'text-success-700' : 'text-slate-800')}>{credit ? '+' : '−'}{formatMoney(t.amount, t.currency)}</div>
+                            <StatusPill status={t.status} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {history.hasMore && (
+                      <button type="button" onClick={history.loadMore} disabled={history.loadingMore}
+                        className="w-full py-2.5 text-xs font-medium text-brand-600 hover:bg-brand-50 disabled:text-slate-300">
+                        {history.loadingMore ? 'Loading…' : 'Load more'}
+                      </button>
+                    )}
+                  </>
+                )
               )}
             </div>
           </Card>

@@ -22,9 +22,10 @@ import { CompliancePage } from '../features/compliance/CompliancePage.jsx';
 import { BranchesListPage } from '../features/branches/BranchesListPage.jsx';
 import { CardsPage } from '../features/cards/CardsPage.jsx';
 import { TransactionsPage } from '../features/transactions/TransactionsPage.jsx';
+import { ReportsPage } from '../features/reports/ReportsPage.jsx';
 import {
   PaymentsPage, FxPage,
-  UsersPage, AuditPage, ReportsPage, NotFoundPage,
+  UsersPage, AuditPage, NotFoundPage,
 } from '../features/scaffolds.jsx';
 
 export default function App() {

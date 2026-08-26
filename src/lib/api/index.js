@@ -35,9 +35,10 @@ export const TransactionApi = {
   process: (id) => api.put(`/transactions/${id}/process`, {}),
   cancel: (id) => api.put(`/transactions/${id}/cancel`, {}),
   logs: (id) => api.get(`/transactions/${id}/logs`),
-  byAccount: (accountId) => api.get(`/transactions/account/${accountId}`),
+  byAccount: (accountId, params) => api.get(`/transactions/account/${accountId}`, { params }),
   history: (params) => api.get('/transactions/history', { params }),
   stats: () => api.get('/transactions/admin/stats'),
+  tellerToday: (params) => api.get('/transactions/teller/today', { params }),
 };
 
 export const LoanApi = {
