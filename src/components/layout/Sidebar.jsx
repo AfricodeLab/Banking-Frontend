@@ -20,8 +20,8 @@ export function Sidebar({ collapsed, onToggle }) {
           </span>
           {!collapsed && (
             <div className="min-w-0 leading-tight">
-              <div className="text-[15px] font-semibold text-white tracking-tight">NovaBank</div>
-              <div className="text-[10px] uppercase tracking-[0.14em] text-slate-400">Core Banking</div>
+              <div className="text-[15px] font-semibold text-white tracking-tight">AfriCore</div>
+              <div className="text-[10px] uppercase tracking-[0.14em] text-slate-400">AfricodeLab</div>
             </div>
           )}
         </div>

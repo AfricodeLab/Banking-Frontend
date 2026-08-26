@@ -142,6 +142,8 @@ export function CustomerDetailPage() {
               <Item label="ID number" value={c.id_number} mono />
               <Item label="ID expiry" value={c.id_expiry && formatDate(c.id_expiry)} />
               <Item label="Tax ID (TIN)" value={c.tin} mono />
+              <Item label="Proof of address" value={(c.proof_of_address_type || '').replace(/_/g, ' ')} cap />
+              <Item label="Bill / ref no." value={c.proof_of_address_ref} mono />
               <Item label="Risk rating" value={c.risk_rating} cap />
             </div>
           </Card>

@@ -44,8 +44,8 @@ export function LoginPage() {
             <Landmark size={22} />
           </span>
           <div>
-            <div className="text-lg font-semibold tracking-tight">NovaBank</div>
-            <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Core Banking Console</div>
+            <div className="text-lg font-semibold tracking-tight">AfriCore</div>
+            <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Core Banking · AfricodeLab</div>
           </div>
         </div>
 
@@ -72,7 +72,7 @@ export function LoginPage() {
           </div>
         </div>
 
-        <div className="relative text-xs text-slate-500">© {new Date().getFullYear()} NovaBank · Africode Lab</div>
+        <div className="relative text-xs text-slate-500">© {new Date().getFullYear()} AfricodeLab · AfriCore Core Banking</div>
       </div>
 
       {/* Form panel */}
@@ -80,7 +80,7 @@ export function LoginPage() {
         <div className="w-full max-w-sm">
           <div className="lg:hidden flex items-center gap-2.5 mb-8">
             <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-teal-500 text-white"><Landmark size={20} /></span>
-            <span className="text-lg font-semibold text-slate-800">NovaBank</span>
+            <span className="text-lg font-semibold text-slate-800">AfriCore</span>
           </div>
 
           <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">Sign in</h2>

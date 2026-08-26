@@ -18,9 +18,11 @@ import { LoanCreatePage } from '../features/loans/LoanCreatePage.jsx';
 import { LoanDetailPage } from '../features/loans/LoanDetailPage.jsx';
 import { DepositsListPage } from '../features/deposits/DepositsListPage.jsx';
 import { BookDepositPage } from '../features/deposits/BookDepositPage.jsx';
+import { CompliancePage } from '../features/compliance/CompliancePage.jsx';
+import { BranchesListPage } from '../features/branches/BranchesListPage.jsx';
 import {
-  PaymentsPage, TransactionsPage, FxPage, CardsPage, CompliancePage,
-  BranchesPage, UsersPage, AuditPage, ReportsPage, NotFoundPage,
+  PaymentsPage, TransactionsPage, FxPage, CardsPage,
+  UsersPage, AuditPage, ReportsPage, NotFoundPage,
 } from '../features/scaffolds.jsx';
 
 export default function App() {
@@ -49,7 +51,7 @@ export default function App() {
               <Route path="deposits" element={<DepositsListPage />} />
               <Route path="deposits/new" element={<BookDepositPage />} />
               <Route path="compliance" element={<CompliancePage />} />
-              <Route path="branches" element={<BranchesPage />} />
+              <Route path="branches" element={<BranchesListPage />} />
               <Route path="admin/users" element={<UsersPage />} />
               <Route path="audit" element={<AuditPage />} />
               <Route path="reports" element={<ReportsPage />} />
