@@ -22,14 +22,20 @@ export function Badge({ tone = 'neutral', className, children }) {
 // Maps common banking statuses to a tone + label.
 const STATUS_MAP = {
   active: 'success', completed: 'success', approved: 'success', verified: 'success', posted: 'success', cleared: 'success',
-  pending: 'warning', review: 'warning', processing: 'warning', hold: 'warning', submitted: 'warning',
-  inactive: 'neutral', closed: 'neutral', cancelled: 'neutral', draft: 'neutral', dormant: 'neutral',
+  pending: 'warning', review: 'warning', processing: 'warning', hold: 'warning', submitted: 'warning', pending_approval: 'warning',
+  inactive: 'neutral', closed: 'neutral', cancelled: 'neutral', draft: 'neutral', dormant: 'neutral', reversed: 'neutral',
   failed: 'danger', rejected: 'danger', blocked: 'danger', overdue: 'danger', frozen: 'danger', blacklisted: 'danger', suspended: 'danger',
+};
+
+// Friendlier labels for statuses whose raw value reads poorly.
+const STATUS_LABEL = {
+  pending_approval: 'awaiting approval',
 };
 
 export function StatusPill({ status, className }) {
   const key = String(status || '').toLowerCase();
   const tone = STATUS_MAP[key] || 'neutral';
+  const label = STATUS_LABEL[key] || status || '—';
   return (
     <Badge tone={tone} className={className}>
       <span className={cn('w-1.5 h-1.5 rounded-full',
@@ -38,7 +44,7 @@ export function StatusPill({ status, className }) {
         tone === 'danger' && 'bg-danger-500',
         tone === 'neutral' && 'bg-slate-400',
       )} />
-      {status || '—'}
+      {label}
     </Badge>
   );
 }

@@ -114,15 +114,15 @@ function TransactionDetailModal({ txn, onClose, onReversed }) {
   const doReverse = async () => {
     const ok = await confirm({
       title: 'Reverse transaction?',
-      message: `Post a contra entry that undoes ${formatMoney(txn.amount, txn.currency)} (${txn.transaction_type}) and marks the original as reversed. This cannot be undone.`,
-      confirmLabel: 'Reverse',
+      message: `Submit a reversal of ${formatMoney(txn.amount, txn.currency)} (${txn.transaction_type}) for approval. A second officer must approve before the contra entry posts and the original is marked reversed.`,
+      confirmLabel: 'Submit for approval',
       tone: 'danger',
     });
     if (!ok) return;
     setBusy(true);
     try {
       await TransactionApi.reverse(txn.transaction_id, reason || 'correction');
-      toast.success('Transaction reversed');
+      toast.success('Reversal submitted for approval');
       onReversed?.();
     } catch (err) { toast.error(err?.message || 'Reversal failed'); }
     finally { setBusy(false); }

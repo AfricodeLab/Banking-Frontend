@@ -43,6 +43,13 @@ export const TransactionApi = {
   tellerToday: (params) => api.get('/transactions/teller/today', { params }),
 };
 
+// Maker-checker approval queue.
+export const ApprovalApi = {
+  list: (params) => api.get('/approvals', { params }),
+  approve: (id) => api.post(`/approvals/${id}/approve`, {}),
+  reject: (id, reason) => api.post(`/approvals/${id}/reject`, { reason }),
+};
+
 export const LoanApi = {
   list: (params) => api.get('/loans', { params }),
   get: (id) => api.get(`/loans/${id}`),

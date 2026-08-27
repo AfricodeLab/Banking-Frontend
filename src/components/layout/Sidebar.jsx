@@ -3,8 +3,14 @@ import { NavLink } from 'react-router-dom';
 import { Landmark, ChevronsLeft } from 'lucide-react';
 import { cn } from '../../lib/cn.js';
 import { NAV_GROUPS } from '../../app/nav.js';
+import { useAuth } from '../../lib/auth/AuthContext.jsx';
 
 export function Sidebar({ collapsed, onToggle }) {
+  const { can } = useAuth();
+  // Hide nav items the user lacks permission for, then drop any now-empty groups.
+  const groups = NAV_GROUPS
+    .map((g) => ({ ...g, items: g.items.filter((it) => !it.permission || can(it.permission)) }))
+    .filter((g) => g.items.length > 0);
   return (
     <aside
       className={cn(
@@ -29,7 +35,7 @@ export function Sidebar({ collapsed, onToggle }) {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto scroll-thin py-3">
-        {NAV_GROUPS.map((group) => (
+        {groups.map((group) => (
           <div key={group.label} className="mb-1">
             {!collapsed && (
               <div className="px-4 pt-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">

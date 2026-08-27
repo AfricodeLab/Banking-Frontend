@@ -113,7 +113,11 @@ export function TellerPage() {
     setBusy(true);
     try {
       const txn = await TransactionApi.create(payload);
-      toast.success(`${activeOp.label} posted`, { title: formatMoney(amt, ccy) });
+      if (String(txn?.status).toLowerCase() === 'pending_approval') {
+        toast.info(`${activeOp.label} submitted for approval`, { title: `${formatMoney(amt, ccy)} · awaiting a second officer` });
+      } else {
+        toast.success(`${activeOp.label} posted`, { title: formatMoney(amt, ccy) });
+      }
       setReceipt({ ...txn, party: cashAcct?.customer_name });
       setAmount(''); setDesc(''); setDenoms({});
       await reload();

@@ -65,7 +65,11 @@ export function PaymentsPage() {
         transaction_type: 'transfer',
         description: desc || `Payment to ${selectedBen.name}`,
       });
-      toast.success('Payment sent', { title: `${formatMoney(amt, fromAcct.currency)} → ${selectedBen.name}` });
+      if (String(txn?.status).toLowerCase() === 'pending_approval') {
+        toast.info('Payment submitted for approval', { title: `${formatMoney(amt, fromAcct.currency)} → ${selectedBen.name} · awaiting a second officer` });
+      } else {
+        toast.success('Payment sent', { title: `${formatMoney(amt, fromAcct.currency)} → ${selectedBen.name}` });
+      }
       setReceipt({ ...txn, beneficiary: selectedBen });
       setAmount(''); setDesc('');
       accountsQ.reload(); recent.reload();

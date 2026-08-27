@@ -25,6 +25,7 @@ import { CardsPage } from '../features/cards/CardsPage.jsx';
 import { TransactionsPage } from '../features/transactions/TransactionsPage.jsx';
 import { ReportsPage } from '../features/reports/ReportsPage.jsx';
 import { PaymentsPage } from '../features/payments/PaymentsPage.jsx';
+import { ApprovalsPage } from '../features/approvals/ApprovalsPage.jsx';
 import { AuditPage } from '../features/audit/AuditPage.jsx';
 import { FxPage } from '../features/fx/FxPage.jsx';
 import { UsersRolesPage } from '../features/admin/UsersRolesPage.jsx';
@@ -53,6 +54,7 @@ export default function App() {
               <Route path="teller" element={<TellerPage />} />
               <Route path="payments" element={<PaymentsPage />} />
               <Route path="transactions" element={<TransactionsPage />} />
+              <Route path="approvals" element={<ApprovalsPage />} />
               <Route path="fx" element={<FxPage />} />
               <Route path="loans" element={<LoansListPage />} />
               <Route path="loans/new" element={<LoanCreatePage />} />
