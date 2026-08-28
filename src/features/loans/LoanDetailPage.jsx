@@ -102,7 +102,7 @@ export function LoanDetailPage() {
       </div>
 
       <Tabs value={tab} onChange={setTab} className="mb-4"
-        tabs={[{ value: 'overview', label: 'Overview' }, { value: 'schedule', label: 'Amortization', count: schedule.length }]} />
+        tabs={[{ value: 'overview', label: 'Overview' }, { value: 'schedule', label: 'Amortization', count: schedule.length }, { value: 'repayments', label: 'Repayments' }]} />
 
       {tab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -144,6 +144,8 @@ export function LoanDetailPage() {
             rows={schedule} rowKey={(r) => r.n} />
         </Card>
       )}
+
+      {tab === 'repayments' && <RepaymentsHistory loanId={id} />}
 
       <RepaymentModal open={payOpen} onClose={() => setPayOpen(false)} loan={loan} onPaid={() => summary.reload()} />
     </div>
@@ -201,4 +203,27 @@ function Figure({ label, value, big }) {
 }
 function Row({ label, value }) {
   return <div className="flex items-center justify-between gap-3"><span className="text-xs uppercase tracking-wide text-slate-400">{label}</span><span className="text-slate-700">{value}</span></div>;
+}
+
+// RepaymentsHistory — actual payments made against the loan (interest/principal split).
+function RepaymentsHistory({ loanId }) {
+  const q = useAsync(() => LoanApi.repayments(loanId).then((r) => r.repayments || []), [loanId]);
+  return (
+    <Card>
+      <CardHeader title="Repayment history" icon={HandCoins} subtitle="Payments received, with interest/principal split" />
+      <DataTable
+        columns={[
+          { key: 'paid_at', header: 'Date', render: (r) => new Date(r.paid_at).toLocaleString() },
+          { key: 'amount', header: 'Amount', align: 'right', className: 'num font-medium text-slate-800', render: (r) => formatMoney(r.amount, 'GHS') },
+          { key: 'principal_portion', header: 'Principal', align: 'right', className: 'num text-slate-600', render: (r) => formatMoney(r.principal_portion, 'GHS') },
+          { key: 'interest_portion', header: 'Interest', align: 'right', className: 'num text-slate-600', render: (r) => formatMoney(r.interest_portion, 'GHS') },
+          { key: 'balance_after', header: 'Balance after', align: 'right', className: 'num text-slate-800', render: (r) => formatMoney(r.balance_after, 'GHS') },
+        ]}
+        rows={q.loading ? null : (q.data || [])}
+        loading={q.loading}
+        rowKey={(r) => r.repayment_id}
+        empty={{ icon: HandCoins, title: 'No repayments yet', description: 'Payments made against this loan will appear here.' }}
+      />
+    </Card>
+  );
 }
