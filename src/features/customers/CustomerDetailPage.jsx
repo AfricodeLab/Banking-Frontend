@@ -182,6 +182,9 @@ export function CustomerDetailPage() {
               </div>
             </Card>
           </div>
+          <div className="lg:col-span-2">
+            <IdentificationsCard customerId={id} />
+          </div>
         </div>
       )}
 
@@ -312,5 +315,75 @@ function OnlineBankingButton({ customerId, email }) {
         )}
       </Modal>
     </>
+  );
+}
+
+// IdentificationsCard — multiple identity documents per customer (numbers masked).
+function IdentificationsCard({ customerId }) {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const q = useAsync(() => CustomerApi.identifications(customerId).then((r) => r.identifications || []), [customerId]);
+  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState({ id_type: 'ghana_card', id_number: '', issuing_authority: '', expiry_date: '' });
+  const [busy, setBusy] = useState(false);
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const add = async () => {
+    if (!form.id_number.trim()) return toast.error('Enter the ID number');
+    setBusy(true);
+    try {
+      await CustomerApi.addIdentification(customerId, form);
+      toast.success('Identity document added');
+      setForm({ id_type: 'ghana_card', id_number: '', issuing_authority: '', expiry_date: '' });
+      setAdding(false); q.reload();
+    } catch (err) { toast.error(err?.message || 'Could not add'); }
+    finally { setBusy(false); }
+  };
+  const remove = async (i) => {
+    const ok = await confirm({ title: 'Remove document?', message: `Remove this ${String(i.id_type).replace(/_/g, ' ')}?`, confirmLabel: 'Remove', tone: 'danger' });
+    if (!ok) return;
+    try { await CustomerApi.removeIdentification(customerId, i.id_record_id); toast.success('Removed'); q.reload(); }
+    catch (err) { toast.error(err?.message || 'Could not remove'); }
+  };
+
+  return (
+    <Card>
+      <CardHeader title="Identity documents" icon={ShieldCheck} subtitle="Numbers encrypted at rest & masked"
+        actions={<Button size="sm" variant="secondary" icon={Plus} onClick={() => setAdding((v) => !v)}>Add ID</Button>} />
+      <div className="p-4">
+        {adding && (
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-3 p-3 rounded-lg bg-slate-50 border border-slate-200">
+            <select value={form.id_type} onChange={set('id_type')} className="h-9 px-2 text-sm border border-slate-300 rounded-md bg-white">
+              {['ghana_card', 'passport', 'voter_id', 'drivers_license', 'ssnit'].map((t) => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
+            </select>
+            <input value={form.id_number} onChange={set('id_number')} placeholder="ID number" className="num h-9 px-2 text-sm border border-slate-300 rounded-md" />
+            <input value={form.issuing_authority} onChange={set('issuing_authority')} placeholder="Issuing authority" className="h-9 px-2 text-sm border border-slate-300 rounded-md" />
+            <div className="flex gap-1.5">
+              <input type="date" value={form.expiry_date} onChange={set('expiry_date')} className="h-9 px-2 text-xs border border-slate-300 rounded-md flex-1" title="Expiry" />
+              <Button size="sm" loading={busy} onClick={add}>Save</Button>
+            </div>
+          </div>
+        )}
+        {q.loading ? (
+          <div className="flex items-center gap-2 text-slate-400 text-sm py-4"><Spinner size={15} /> Loading…</div>
+        ) : (q.data || []).length === 0 ? (
+          <p className="text-sm text-slate-400 py-3">No identity documents recorded.</p>
+        ) : (
+          <div className="space-y-2">
+            {q.data.map((i) => (
+              <div key={i.id_record_id} className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2">
+                <div className="flex items-center gap-2.5">
+                  <Badge tone={i.primary ? 'brand' : 'neutral'}>{String(i.id_type).replace(/_/g, ' ')}</Badge>
+                  <span className="num text-sm text-slate-700">{i.id_number}</span>
+                  {i.issuing_authority && <span className="text-xs text-slate-400">· {i.issuing_authority}</span>}
+                  {i.primary && <span className="text-2xs text-brand-500">primary</span>}
+                </div>
+                <button onClick={() => remove(i)} className="text-slate-300 hover:text-danger-600"><Trash2 size={15} /></button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Card>
   );
 }

@@ -15,6 +15,9 @@ export const AuthApi = {
 
 export const CustomerApi = {
   list: (params) => api.get('/customers', { params }),
+  identifications: (id) => api.get(`/customers/${id}/identifications`),
+  addIdentification: (id, payload) => api.post(`/customers/${id}/identifications`, payload),
+  removeIdentification: (id, idr) => api.del(`/customers/${id}/identifications/${idr}`),
   get: (id) => api.get(`/customers/${id}`),
   create: (payload) => api.post('/customers', payload),
   update: (id, payload) => api.put(`/customers/${id}`, payload),
@@ -34,6 +37,9 @@ export const AccountApi = {
   transactions: (id) => api.get(`/accounts/${id}/transactions`),
   limits: (id) => api.get(`/accounts/${id}/limits`),
   setLimits: (id, payload) => api.put(`/accounts/${id}/limits`, payload),
+  holders: (id) => api.get(`/accounts/${id}/holders`),
+  addHolder: (id, payload) => api.post(`/accounts/${id}/holders`, payload),
+  removeHolder: (id, hid) => api.del(`/accounts/${id}/holders/${hid}`),
 };
 
 export const TransactionApi = {
