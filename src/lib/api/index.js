@@ -59,6 +59,7 @@ export const TransactionApi = {
 export const RiskApi = {
   alerts: (status) => api.get('/risk/alerts', { params: status ? { status } : {} }),
   decide: (id, status, note) => api.post(`/risk/alerts/${id}/decide`, { status, note }),
+  byTransaction: (txnId) => api.get(`/risk/transaction/${txnId}/alert`),
 };
 
 // In-app notifications.

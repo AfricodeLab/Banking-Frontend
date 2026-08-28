@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import {
   Receipt, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, CheckCircle2,
-  Clock, XCircle, ScrollText,
+  Clock, XCircle, ScrollText, ShieldAlert, Bot, ShieldCheck,
 } from 'lucide-react';
-import { TransactionApi } from '../../lib/api/index.js';
+import { TransactionApi, RiskApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
 import { loadAllTransactions, partyLabel } from './transactionsData.js';
 import { asList } from '../accounts/accountsData.js';
@@ -107,6 +107,7 @@ function TransactionDetailModal({ txn, onClose, onReversed }) {
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const logs = useAsync(() => (txn ? TransactionApi.logs(txn.transaction_id).then(asList).catch(() => []) : Promise.resolve([])), [txn?.transaction_id]);
+  const alert = useAsync(() => (txn ? RiskApi.byTransaction(txn.transaction_id).then((r) => r?.alert ?? null).catch(() => null) : Promise.resolve(null)), [txn?.transaction_id]);
   if (!txn) return null;
   const Icon = TYPE_ICON[txn.transaction_type] || Receipt;
   const canReverse = String(txn.status).toLowerCase() === 'completed';
@@ -138,6 +139,8 @@ function TransactionDetailModal({ txn, onClose, onReversed }) {
             <div className="flex items-center gap-2"><span className="capitalize text-sm text-slate-600">{txn.transaction_type}</span><StatusPill status={txn.status} /></div>
           </div>
         </div>
+
+        <RiskAssessmentPanel loading={alert.loading} alert={alert.data} />
 
         <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm border-t border-slate-100 pt-4">
           <Detail label="Counterparty" value={partyLabel(txn)} />
@@ -190,6 +193,67 @@ function TransactionDetailModal({ txn, onClose, onReversed }) {
         ) : null}
       </div>
     </Modal>
+  );
+}
+
+const DEC_TONE = {
+  BLOCK:  { wrap: 'bg-danger-50 border-danger-200', chip: 'bg-danger-100 text-danger-700', text: 'text-danger-700', icon: ShieldAlert, label: 'Blocked by fraud AI' },
+  REVIEW: { wrap: 'bg-warning-50 border-warning-200', chip: 'bg-warning-100 text-warning-700', text: 'text-warning-700', icon: ShieldAlert, label: 'Flagged for review' },
+  ALLOW:  { wrap: 'bg-success-50 border-success-200', chip: 'bg-success-100 text-success-700', text: 'text-success-700', icon: ShieldCheck, label: 'Cleared' },
+};
+
+// Shows why the fraud AI (Sentinel) flagged or blocked this transaction. Renders
+// nothing for clean transactions; loud and unmissable when a decision was made.
+function RiskAssessmentPanel({ loading, alert }) {
+  if (loading) {
+    return (
+      <div className="border-t border-slate-100 pt-4">
+        <div className="flex items-center gap-2 text-slate-400 text-sm"><Spinner size={14} /> Checking fraud assessment…</div>
+      </div>
+    );
+  }
+  if (!alert) return null;
+
+  const decision = String(alert.decision || (alert.severity === 'high' ? 'BLOCK' : 'REVIEW')).toUpperCase();
+  const tone = DEC_TONE[decision] || DEC_TONE.REVIEW;
+  const Icon = tone.icon;
+  const score = typeof alert.score === 'number' ? alert.score : Number(alert.score || 0);
+  const explanation = alert.explanation || alert.reasons || 'No explanation was recorded for this alert.';
+  const signals = String(alert.reasons || '').split(',').map((s) => s.trim()).filter(Boolean);
+
+  return (
+    <div className={cn('rounded-xl border p-4', tone.wrap)}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className={cn('flex items-center justify-center w-9 h-9 rounded-lg', tone.chip)}><Icon size={18} /></span>
+          <div>
+            <div className={cn('text-sm font-semibold', tone.text)}>{tone.label}</div>
+            <div className="text-2xs uppercase tracking-wide text-slate-500">
+              Fraud assessment · source {alert.source || 'rules'}{alert.status ? ` · ${alert.status}` : ''}
+            </div>
+          </div>
+        </div>
+        {score > 0 && (
+          <div className="text-right">
+            <div className={cn('num text-xl font-semibold leading-none', tone.text)}>{Math.round(score * 100)}</div>
+            <div className="text-2xs uppercase tracking-wide text-slate-500">risk score</div>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-3 rounded-lg bg-white/70 border border-white/60 p-3">
+        <div className="flex items-center gap-1.5 text-2xs uppercase tracking-wide text-slate-500 mb-1"><Bot size={13} /> AI analyst explanation</div>
+        <p className="text-sm text-slate-700 leading-relaxed">{explanation}</p>
+      </div>
+
+      {signals.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {signals.map((s, i) => (
+            <span key={i} className="px-2 py-0.5 text-2xs font-medium rounded-md bg-white/70 text-slate-600 border border-white/60">{s}</span>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
