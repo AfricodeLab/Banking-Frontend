@@ -1,9 +1,10 @@
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from '../lib/auth/AuthContext.jsx';
+import { AuthProvider, useAuth } from '../lib/auth/AuthContext.jsx';
 import { ToastProvider, ConfirmProvider } from '../components/ui/index.js';
 import { AppShell } from '../components/layout/AppShell.jsx';
 import { RequireAuth } from './RequireAuth.jsx';
+import { CustomerPortal } from '../features/portal/CustomerPortal.jsx';
 
 import { LoginPage } from '../features/auth/LoginPage.jsx';
 import { DashboardPage } from '../features/dashboard/DashboardPage.jsx';
@@ -40,10 +41,34 @@ export default function App() {
       <ToastProvider>
         <ConfirmProvider>
         <HashRouter>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
+          <AppRoutes />
+        </HashRouter>
+        </ConfirmProvider>
+      </ToastProvider>
+    </AuthProvider>
+  );
+}
 
-            <Route element={<RequireAuth><AppShell /></RequireAuth>}>
+// AppRoutes branches on the kind of login: customer logins (linked to a CIF) get the
+// self-service portal; staff get the full console.
+function AppRoutes() {
+  const { isAuthenticated, user } = useAuth();
+  const isCustomer = isAuthenticated && !!user?.customer_id;
+
+  if (isCustomer) {
+    return (
+      <Routes>
+        <Route path="/" element={<RequireAuth><CustomerPortal /></RequireAuth>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
+  }
+
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+
+      <Route element={<RequireAuth><AppShell /></RequireAuth>}>
               <Route index element={<DashboardPage />} />
               <Route path="customers" element={<CustomerListPage />} />
               <Route path="customers/new" element={<CustomerCreatePage />} />
@@ -71,14 +96,10 @@ export default function App() {
               <Route path="settings/security" element={<SecuritySettingsPage />} />
               <Route path="audit" element={<AuditPage />} />
               <Route path="reports" element={<ReportsPage />} />
-              <Route path="*" element={<NotFoundPage />} />
-            </Route>
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
 
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </HashRouter>
-        </ConfirmProvider>
-      </ToastProvider>
-    </AuthProvider>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

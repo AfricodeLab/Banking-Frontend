@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, Wallet, ShieldCheck, Plus, Calendar, Landmark, Users, Pencil, Lock } from 'lucide-react';
-import { CustomerApi, AccountApi, LoanApi } from '../../lib/api/index.js';
+import { ArrowLeft, Mail, Phone, MapPin, Wallet, ShieldCheck, Plus, Calendar, Landmark, Users, Pencil, Lock, Smartphone, Copy, Check } from 'lucide-react';
+import { CustomerApi, AccountApi, LoanApi, PortalApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
-import { Card, CardHeader, Tabs, StatusPill, Button, DataTable, Spinner, Badge } from '../../components/ui/index.js';
+import { Card, CardHeader, Tabs, StatusPill, Button, DataTable, Spinner, Badge, Modal, useToast, useConfirm } from '../../components/ui/index.js';
 import { formatMoney, formatDate, formatNumber, initials } from '../../lib/format.js';
 import { OpenAccountModal } from '../accounts/OpenAccountModal.jsx';
 import { useLeafCrumb } from '../../components/layout/Breadcrumbs.jsx';
@@ -75,6 +75,7 @@ export function CustomerDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <OnlineBankingButton customerId={id} email={c.email} />
             <Button variant="secondary" onClick={() => navigate(`/customers/${id}/edit`)} icon={Pencil}>Edit</Button>
             <Button variant="secondary" onClick={() => navigate(`/loans/new?customer=${id}`)} icon={Landmark}>New loan</Button>
             <Button onClick={() => setOpenAcct(true)} icon={Plus}>Open account</Button>
@@ -252,5 +253,64 @@ function Item({ label, value, mono, cap, span }) {
       <div className="text-2xs uppercase tracking-wide text-slate-400">{label}</div>
       <div className={`text-slate-700 mt-0.5 ${mono ? 'num' : ''} ${cap ? 'capitalize' : ''} ${!value ? 'text-slate-300' : ''}`}>{value || '—'}</div>
     </div>
+  );
+}
+
+// OnlineBankingButton lets staff provision a customer-facing login. The temporary
+// password is shown exactly once.
+function OnlineBankingButton({ customerId, email }) {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [busy, setBusy] = useState(false);
+  const [creds, setCreds] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  const provision = async () => {
+    const ok = await confirm({
+      title: 'Enable online banking?',
+      message: 'Create a self-service login for this customer. A one-time temporary password will be shown — share it securely; the customer should change it on first sign-in.',
+      confirmLabel: 'Create login',
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      const res = await PortalApi.provision(customerId, { email });
+      setCreds(res);
+    } catch (err) {
+      toast.error(err?.message || 'Could not enable online banking');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copy = () => {
+    try {
+      navigator.clipboard.writeText(`Username: ${creds.username}\nTemporary password: ${creds.temporary_password}`);
+      setCopied(true); setTimeout(() => setCopied(false), 1500);
+    } catch { /* ignore */ }
+  };
+
+  return (
+    <>
+      <Button variant="secondary" icon={Smartphone} loading={busy} onClick={provision}>Online banking</Button>
+      <Modal open={!!creds} onClose={() => setCreds(null)} title="Online banking enabled" subtitle="Share these credentials securely — the password is shown once"
+        footer={<Button onClick={() => setCreds(null)}>Done</Button>}>
+        {creds && (
+          <div className="space-y-3">
+            <div className="rounded-md border border-slate-200 divide-y divide-slate-100">
+              <div className="flex items-center justify-between px-3 py-2">
+                <span className="text-xs uppercase tracking-wide text-slate-400">Username</span>
+                <span className="num text-sm text-slate-800">{creds.username}</span>
+              </div>
+              <div className="flex items-center justify-between px-3 py-2">
+                <span className="text-xs uppercase tracking-wide text-slate-400">Temporary password</span>
+                <span className="num text-sm text-slate-800">{creds.temporary_password}</span>
+              </div>
+            </div>
+            <Button variant="secondary" icon={copied ? Check : Copy} onClick={copy} className="w-full">{copied ? 'Copied' : 'Copy credentials'}</Button>
+          </div>
+        )}
+      </Modal>
+    </>
   );
 }

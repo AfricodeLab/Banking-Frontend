@@ -47,6 +47,14 @@ export const TransactionApi = {
   tellerToday: (params) => api.get('/transactions/teller/today', { params }),
 };
 
+// Customer online-banking portal (scoped to the logged-in customer).
+export const PortalApi = {
+  profile: () => api.get('/portal/profile'),
+  accounts: () => api.get('/portal/accounts'),
+  transactions: (params) => api.get('/portal/transactions', { params }),
+  provision: (customerId, payload) => api.post(`/portal/access/${customerId}`, payload || {}),
+};
+
 // Outbound payment rails (GIP / MoMo / RTGS / SWIFT).
 export const PayoutApi = {
   rails: () => api.get('/rails'),
