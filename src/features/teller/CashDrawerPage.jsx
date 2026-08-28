@@ -140,6 +140,7 @@ function OpenDrawer({ summary, onChanged }) {
         <div className="space-y-4">
           <VaultCard onDone={reload} />
           <AdjustCard onDone={reload} />
+          <PendingAdjustments onDone={reload} />
           <Button variant="danger" icon={LockKeyhole} className="w-full" onClick={() => setClosing(true)}>Close session (end of day)</Button>
         </div>
       </div>
@@ -208,8 +209,9 @@ function AdjustCard({ onDone }) {
     if (!note.trim()) return toast.error('A reason is required');
     setBusy(true);
     try {
-      await TellerApi.adjust({ amount: String(amt.toFixed(2)), note: note.trim() });
-      toast.success('Adjustment posted');
+      const res = await TellerApi.adjust({ amount: String(amt.toFixed(2)), note: note.trim() });
+      if (res?.pending) toast.info('Adjustment submitted for approval', { title: 'Needs a second supervisor' });
+      else toast.success('Adjustment posted');
       setAmount(''); setNote(''); onDone?.();
     } catch (err) { toast.error(err?.message || 'Adjustment failed'); }
     finally { setBusy(false); }
@@ -222,6 +224,56 @@ function AdjustCard({ onDone }) {
         <Input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} mono placeholder="e.g. -50.00" />
         <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Reason (required)" />
         <Button variant="secondary" icon={Scale} loading={busy} onClick={submit} className="w-full">Post adjustment</Button>
+      </div>
+    </Card>
+  );
+}
+
+// PendingAdjustments — supervisors approve/reject large cash adjustments (four-eyes).
+function PendingAdjustments({ onDone }) {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const { can, user } = useAuth();
+  const q = useAsync(() => TellerApi.pendingAdjustments().then((r) => r.adjustments || []), []);
+  if (!can('approve_transaction')) return null;
+  const rows = q.data || [];
+  if (!q.loading && rows.length === 0) return null;
+
+  const approve = async (a) => {
+    const ok = await confirm({ title: 'Approve cash adjustment?', message: `Apply ${formatMoney(a.amount, 'GHS')} to the drawer. Recorded against your name.`, confirmLabel: 'Approve' });
+    if (!ok) return;
+    try { await TellerApi.approveAdjustment(a.adjustment_id); toast.success('Adjustment approved'); q.reload(); onDone?.(); }
+    catch (err) { toast.error(err?.message || 'Could not approve'); }
+  };
+  const reject = async (a) => {
+    try { await TellerApi.rejectAdjustment(a.adjustment_id, 'not supported'); toast.success('Adjustment rejected'); q.reload(); }
+    catch (err) { toast.error(err?.message || 'Could not reject'); }
+  };
+
+  return (
+    <Card>
+      <CardHeader title="Pending adjustments" icon={Scale} subtitle="Approve large corrections (second supervisor)" />
+      <div className="p-3 space-y-2">
+        {rows.map((a) => {
+          const own = a.requested_by === user?.user_id;
+          return (
+            <div key={a.adjustment_id} className="rounded-md border border-slate-200 p-2.5">
+              <div className="flex items-center justify-between">
+                <span className={cn('num font-semibold', Number(a.amount) < 0 ? 'text-danger-600' : 'text-success-600')}>{formatMoney(a.amount, 'GHS')}</span>
+                <span className="text-2xs text-slate-400">{String(a.requested_by || '').slice(0, 8)}…</span>
+              </div>
+              <div className="text-xs text-slate-500 mt-0.5">{a.note}</div>
+              {own ? (
+                <div className="text-2xs text-slate-400 mt-1.5">You requested this — another supervisor must approve.</div>
+              ) : (
+                <div className="flex gap-1.5 mt-2">
+                  <Button size="xs" variant="ghost" onClick={() => reject(a)}>Reject</Button>
+                  <Button size="xs" variant="success" onClick={() => approve(a)}>Approve</Button>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </Card>
   );

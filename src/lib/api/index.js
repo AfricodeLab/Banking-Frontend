@@ -66,6 +66,9 @@ export const TellerApi = {
   withdraw: (payload, key) => api.post('/teller/cash/withdraw', payload, key ? { headers: { 'Idempotency-Key': key } } : undefined),
   vault: (payload) => api.post('/teller/cash/vault', payload),
   adjust: (payload) => api.post('/teller/cash/adjust', payload),
+  pendingAdjustments: () => api.get('/teller/cash/adjustments/pending'),
+  approveAdjustment: (id) => api.post(`/teller/cash/adjustments/${id}/approve`, {}),
+  rejectAdjustment: (id, reason) => api.post(`/teller/cash/adjustments/${id}/reject`, { reason }),
   movements: () => api.get('/teller/cash/movements'),
 };
 
