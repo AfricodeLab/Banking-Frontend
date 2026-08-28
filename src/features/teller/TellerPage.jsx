@@ -4,7 +4,7 @@ import {
   Banknote, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, CheckCircle2, Receipt,
   RotateCcw, User, Calculator, Coins, Clock, Building2, CircleUser, ArrowRight,
 } from 'lucide-react';
-import { TransactionApi } from '../../lib/api/index.js';
+import { TransactionApi, TellerApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
 import { usePagedList } from '../../lib/usePagedList.js';
 import { useAuth } from '../../lib/auth/AuthContext.jsx';
@@ -57,6 +57,9 @@ export function TellerPage() {
     [],
     { pageSize: 15 },
   );
+  // Cash-drawer session — deposits/withdrawals are gated on this being open.
+  const drawer = useAsync(() => TellerApi.current().then((r) => r.session), []);
+  const drawerOpen = !!drawer.data;
   const cashIn = tellerSession.meta?.cashIn || 0;
   const cashOut = tellerSession.meta?.cashOut || 0;
   const sessionCount = tellerSession.total || 0;
@@ -106,13 +109,23 @@ export function TellerPage() {
     });
     if (!ok) return;
 
-    const payload = { amount: String(amt.toFixed(2)), transaction_type: op, description: desc || activeOp.label };
-    if (op !== 'deposit') payload.from_account_id = from;
-    if (op !== 'withdrawal') payload.to_account_id = to;
+    // Cash operations require an open drawer session; transfers do not (no cash moves).
+    if ((op === 'deposit' || op === 'withdrawal') && !drawerOpen) {
+      return toast.error('Open a cash-drawer session first', { title: 'Go to Cash Drawer → Open session' });
+    }
 
     setBusy(true);
     try {
-      const txn = await TransactionApi.create(payload);
+      let txn;
+      if (op === 'transfer') {
+        txn = await TransactionApi.create({ amount: String(amt.toFixed(2)), transaction_type: 'transfer', from_account_id: from, to_account_id: to, description: desc || activeOp.label });
+      } else {
+        // Idempotency key guards against double-submit / retry on the cash path.
+        const key = (globalThis.crypto?.randomUUID?.() || `${op}-${to || from}-${amt}-${Date.now()}`);
+        const body = { account_id: op === 'deposit' ? to : from, amount: String(amt.toFixed(2)), currency: ccy, narration: desc || activeOp.label };
+        const res = op === 'deposit' ? await TellerApi.deposit(body, key) : await TellerApi.withdraw(body, key);
+        txn = res.transaction;
+      }
       if (String(txn?.status).toLowerCase() === 'pending_approval') {
         toast.info(`${activeOp.label} submitted for approval`, { title: `${formatMoney(amt, ccy)} · awaiting a second officer` });
       } else {
@@ -122,6 +135,7 @@ export function TellerPage() {
       setAmount(''); setDesc(''); setDenoms({});
       await reload();
       tellerSession.reload();
+      drawer.reload();
       history.reload();
     } catch (err) {
       toast.error(err?.message || 'Transaction failed');
@@ -143,6 +157,23 @@ export function TellerPage() {
   return (
     <div>
       <PageHeader title="Teller" description="Cash operations — posted live to the double-entry ledger" />
+
+      {/* Cash-drawer session banner */}
+      {!drawer.loading && (
+        drawerOpen ? (
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 mb-4 px-4 py-2.5 rounded-lg bg-success-50 border border-success-500/20 text-sm">
+            <span className="inline-flex items-center gap-1.5 font-medium text-success-700"><Coins size={15} /> Drawer open</span>
+            <span className="text-slate-500">Expected cash <span className="num font-semibold text-slate-800">{formatMoney(drawer.data.expected_cash, 'GHS')}</span></span>
+            <button onClick={() => navigate('/cash-drawer')} className="ml-auto text-xs font-medium text-brand-600 hover:text-brand-700">Manage drawer →</button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3 mb-4 px-4 py-2.5 rounded-lg bg-warning-50 border border-warning-500/20 text-sm text-warning-800">
+            <span className="inline-flex items-center gap-1.5 font-medium"><Coins size={15} /> No open cash-drawer session</span>
+            <span className="text-warning-700/80">You can't accept deposits or pay withdrawals until you open one.</span>
+            <Button size="xs" variant="secondary" className="ml-auto" onClick={() => navigate('/cash-drawer')}>Open session</Button>
+          </div>
+        )
+      )}
 
       {/* Till status bar */}
       <div className="card px-4 py-3 mb-4 flex flex-wrap items-center gap-x-6 gap-y-2">

@@ -29,7 +29,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request(method, path, { body, params, auth = true, signal } = {}) {
+async function request(method, path, { body, params, auth = true, signal, headers: extraHeaders } = {}) {
   const url = new URL(path.startsWith('http') ? path : API_BASE_URL + path);
   if (params) {
     Object.entries(params).forEach(([k, v]) => {
@@ -37,7 +37,7 @@ async function request(method, path, { body, params, auth = true, signal } = {})
     });
   }
 
-  const headers = { Accept: 'application/json' };
+  const headers = { Accept: 'application/json', ...(extraHeaders || {}) };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (auth) {
     const token = getToken();

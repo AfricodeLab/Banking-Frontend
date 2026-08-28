@@ -49,6 +49,17 @@ export const TransactionApi = {
   tellerToday: (params) => api.get('/transactions/teller/today', { params }),
 };
 
+// Teller cash-drawer / session.
+export const TellerApi = {
+  current: () => api.get('/teller/sessions/current'),
+  open: (payload) => api.post('/teller/sessions/open', payload),
+  close: (payload) => api.post('/teller/sessions/close', payload),
+  deposit: (payload, key) => api.post('/teller/cash/deposit', payload, key ? { headers: { 'Idempotency-Key': key } } : undefined),
+  withdraw: (payload, key) => api.post('/teller/cash/withdraw', payload, key ? { headers: { 'Idempotency-Key': key } } : undefined),
+  vault: (payload) => api.post('/teller/cash/vault', payload),
+  movements: () => api.get('/teller/cash/movements'),
+};
+
 // Customer online-banking portal (scoped to the logged-in customer).
 export const PortalApi = {
   profile: () => api.get('/portal/profile'),
