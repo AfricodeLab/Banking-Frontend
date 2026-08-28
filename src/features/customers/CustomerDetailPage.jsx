@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, Wallet, ShieldCheck, Plus, Calendar, Landmark, Users, Pencil } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, Wallet, ShieldCheck, Plus, Calendar, Landmark, Users, Pencil, Lock } from 'lucide-react';
 import { CustomerApi, AccountApi, LoanApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
 import { Card, CardHeader, Tabs, StatusPill, Button, DataTable, Spinner, Badge } from '../../components/ui/index.js';
@@ -131,7 +131,7 @@ export function CustomerDetailPage() {
       {tab === 'profile' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Card>
-            <CardHeader title="Identity & KYC" icon={ShieldCheck} />
+            <CardHeader title="Identity & KYC" icon={ShieldCheck} subtitle="ID number & TIN are encrypted at rest" />
             <div className="p-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
               <Item label="Title" value={c.title} />
               <Item label="Customer type" value={c.customer_type} cap />
@@ -140,9 +140,9 @@ export function CustomerDetailPage() {
               <Item label="Nationality" value={c.nationality} />
               <Item label="Place of birth" value={c.place_of_birth} />
               <Item label="ID type" value={(c.id_type || '').replace('_', ' ')} cap />
-              <Item label="ID number" value={c.id_number} mono />
+              <Item label={<span className="inline-flex items-center gap-1">ID number <Lock size={11} className="text-slate-400" /></span>} value={c.id_number} mono />
               <Item label="ID expiry" value={c.id_expiry && formatDate(c.id_expiry)} />
-              <Item label="Tax ID (TIN)" value={c.tin} mono />
+              <Item label={<span className="inline-flex items-center gap-1">Tax ID (TIN) <Lock size={11} className="text-slate-400" /></span>} value={c.tin} mono />
               <Item label="Proof of address" value={(c.proof_of_address_type || '').replace(/_/g, ' ')} cap />
               <Item label="Bill / ref no." value={c.proof_of_address_ref} mono />
               <Item label="Risk rating" value={c.risk_rating} cap />
