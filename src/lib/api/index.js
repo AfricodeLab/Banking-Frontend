@@ -89,6 +89,7 @@ export const ApprovalApi = {
   list: (params) => api.get('/approvals', { params }),
   approve: (id) => api.post(`/approvals/${id}/approve`, {}),
   reject: (id, reason) => api.post(`/approvals/${id}/reject`, { reason }),
+  requestInfo: (id, note) => api.post(`/approvals/${id}/request-info`, { note }),
 };
 
 export const LoanApi = {

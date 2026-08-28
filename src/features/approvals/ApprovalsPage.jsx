@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   ShieldCheck, CheckCircle2, XCircle, ArrowDownLeft, ArrowUpRight, ArrowLeftRight,
-  RotateCcw, Receipt, UserCheck,
+  RotateCcw, Receipt, UserCheck, HelpCircle,
 } from 'lucide-react';
 import { ApprovalApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
@@ -22,6 +22,7 @@ export function ApprovalsPage() {
   const { user } = useAuth();
   const { data, loading, error, reload } = useAsync(() => ApprovalApi.list(), []);
   const [rejecting, setRejecting] = useState(null);
+  const [requesting, setRequesting] = useState(null);
 
   const rows = data?.approvals || [];
   const threshold = data?.threshold;
@@ -59,6 +60,12 @@ export function ApprovalsPage() {
       },
     },
     { key: 'description', header: 'Details', render: (t) => <span className="text-slate-600">{t.description || '—'}</span> },
+    {
+      key: 'risk', header: 'Risk',
+      render: (t) => (t.risk_indicators?.length
+        ? <div className="flex flex-wrap gap-1">{t.risk_indicators.map((r) => <Badge key={r} tone={r === 'high value' || r.startsWith('account') ? 'danger' : 'warning'}>{r}</Badge>)}</div>
+        : <span className="text-2xs text-slate-300">—</span>),
+    },
     { key: 'reference_number', header: 'Reference', className: 'num text-xs text-slate-400', render: (t) => t.reference_number || '—' },
     {
       key: 'teller_id', header: 'Initiated by',
@@ -71,7 +78,7 @@ export function ApprovalsPage() {
     { key: 'transaction_date', header: 'Submitted', render: (t) => <span className="text-slate-500 text-xs">{formatDateTime(t.transaction_date)}</span> },
     { key: 'amount', header: 'Amount', align: 'right', className: 'num font-semibold text-slate-800', render: (t) => formatMoney(t.amount, t.currency) },
     {
-      key: 'actions', header: '', align: 'right', width: '190px',
+      key: 'actions', header: '', align: 'right', width: '250px',
       render: (t) => {
         const own = t.teller_id === user?.user_id;
         return (
@@ -80,6 +87,7 @@ export function ApprovalsPage() {
               <span className="text-2xs text-slate-400" title="You initiated this — a different officer must approve it">Awaiting another officer</span>
             ) : (
               <>
+                <Button size="xs" variant="ghost" icon={HelpCircle} onClick={(e) => { e.stopPropagation(); setRequesting(t); }}>Info</Button>
                 <Button size="xs" variant="ghost" icon={XCircle} onClick={(e) => { e.stopPropagation(); setRejecting(t); }}>Reject</Button>
                 <Button size="xs" variant="success" icon={CheckCircle2} onClick={(e) => { e.stopPropagation(); approve(t); }}>Approve</Button>
               </>
@@ -126,7 +134,46 @@ export function ApprovalsPage() {
         onClose={() => setRejecting(null)}
         onRejected={() => { setRejecting(null); reload(); }}
       />
+      <RequestInfoModal
+        txn={requesting}
+        onClose={() => setRequesting(null)}
+        onRequested={() => { setRequesting(null); reload(); }}
+      />
     </div>
+  );
+}
+
+function RequestInfoModal({ txn, onClose, onRequested }) {
+  const toast = useToast();
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  if (!txn) return null;
+
+  const submit = async () => {
+    if (!note.trim()) return toast.error('Enter what you need from the initiator');
+    setBusy(true);
+    try {
+      await ApprovalApi.requestInfo(txn.transaction_id, note.trim());
+      toast.success('Information requested', { title: 'The initiator has been notified' });
+      onRequested?.();
+      setNote('');
+    } catch (err) {
+      toast.error(err?.message || 'Could not request info');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal open={!!txn} onClose={onClose} title="Request more information" subtitle={txn.reference_number}
+      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button icon={HelpCircle} loading={busy} onClick={submit}>Send request</Button></>}>
+      <div className="space-y-3">
+        <p className="text-sm text-slate-500">The transaction stays in the queue; the initiator is notified with your note and can supply what's needed.</p>
+        <Field label="What do you need?" required hint="Recorded on the transaction and in the audit trail.">
+          <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. attach source-of-funds documentation" rows={3} />
+        </Field>
+      </div>
+    </Modal>
   );
 }
 
