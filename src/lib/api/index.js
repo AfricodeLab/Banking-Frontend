@@ -134,6 +134,7 @@ export const UserApi = {
   // Admin MFA management.
   requireMfa: (userId, required) => api.post('/admin/mfa/require', { user_id: userId, required }),
   requireMfaByRole: (roleId, required) => api.post('/admin/mfa/require', { role_id: roleId, required }),
+  requireMfaAll: (required) => api.post('/admin/mfa/require', { all: true, required }),
   resetMfa: (userId) => api.post('/admin/mfa/reset', { user_id: userId }),
 };
 

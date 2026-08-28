@@ -222,6 +222,20 @@ function StaffTab() {
     } catch (err) { toast.error(err?.message || 'Could not update'); }
   };
 
+  const requireAll = async () => {
+    const ok = await confirm({
+      title: 'Require MFA for all staff?',
+      message: 'Every staff member will be required to set up two-factor authentication. Those who haven’t enrolled will be prompted to do so at their next sign-in.',
+      confirmLabel: 'Require for all',
+    });
+    if (!ok) return;
+    try {
+      await UserApi.requireMfaAll(true);
+      toast.success('MFA required for all staff');
+      users.reload();
+    } catch (err) { toast.error(err?.message || 'Could not update'); }
+  };
+
   const resetMfa = async (u) => {
     const ok = await confirm({
       title: 'Reset this user’s MFA?',
@@ -285,6 +299,7 @@ function StaffTab() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search staff, role, department…" className="pl-9" />
         </div>
+        {isAdmin && <Button variant="secondary" icon={ShieldCheck} onClick={requireAll}>Require MFA for all</Button>}
         <Button icon={Plus} onClick={() => setAddOpen(true)}>Add staff</Button>
       </div>
       <DataTable
