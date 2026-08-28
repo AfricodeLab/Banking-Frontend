@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, Wallet, ShieldCheck, Plus, Calendar, Landmark, Users, Pencil, Lock, Smartphone, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, Wallet, ShieldCheck, Plus, Calendar, Landmark, Users, Pencil, Lock, Smartphone, Copy, Check, Trash2 } from 'lucide-react';
 import { CustomerApi, AccountApi, LoanApi, PortalApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
 import { Card, CardHeader, Tabs, StatusPill, Button, DataTable, Spinner, Badge, Modal, useToast, useConfirm } from '../../components/ui/index.js';

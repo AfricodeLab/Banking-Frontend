@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Wallet, Receipt, CreditCard, Banknote, Snowflake, Power, ArrowDownLeft, ArrowUpRight, User, FileText, Gauge, Pencil } from 'lucide-react';
+import { ArrowLeft, Wallet, Receipt, CreditCard, Banknote, Snowflake, Power, ArrowDownLeft, ArrowUpRight, User, FileText, Gauge, Pencil, Users, Trash2 } from 'lucide-react';
 import { AccountApi, TransactionApi, CustomerApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
 import { Card, CardHeader, Tabs, StatusPill, Badge, Button, DataTable, Spinner, Modal, Field, Input, useToast, useConfirm } from '../../components/ui/index.js';
 import { useAuth } from '../../lib/auth/AuthContext.jsx';
-import { formatMoney, formatDateTime, formatDate } from '../../lib/format.js';
+import { formatMoney, formatDateTime, formatDate, initials } from '../../lib/format.js';
 import { asList } from './accountsData.js';
 import { useLeafCrumb } from '../../components/layout/Breadcrumbs.jsx';
 
@@ -139,6 +139,7 @@ export function AccountDetailPage() {
         tabs={[
           { value: 'transactions', label: 'Transactions', count: txList.length },
           { value: 'cards', label: 'Cards', count: cardList.length },
+          { value: 'holders', label: 'Holders' },
           { value: 'limits', label: 'Limits' },
           { value: 'details', label: 'Details' },
         ]}
@@ -168,6 +169,8 @@ export function AccountDetailPage() {
             empty={{ icon: CreditCard, title: 'No cards issued', description: 'This account has no linked cards.' }} />
         </Card>
       )}
+
+      {tab === 'holders' && <AccountHolders accountId={id} />}
 
       {tab === 'limits' && <WithdrawalLimits accountId={id} currency={a.currency} />}
 
@@ -286,5 +289,74 @@ function EditLimitsModal({ accountId, current, onClose, onSaved }) {
         </Field>
       </div>
     </Modal>
+  );
+}
+
+// AccountHolders — primary owner + joint/authorized holders (joint accounts).
+function AccountHolders({ accountId }) {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const q = useAsync(() => AccountApi.holders(accountId).then((r) => r.holders || []), [accountId]);
+  const [query, setQuery] = useState('');
+  const [role, setRole] = useState('joint');
+  const results = useAsync(() => (query.trim().length >= 2 ? CustomerApi.list({ limit: 8 }).then(asList) : Promise.resolve([])), [query]);
+
+  const add = async (customerId) => {
+    try { await AccountApi.addHolder(accountId, { customer_id: customerId, role }); toast.success('Holder added'); setQuery(''); q.reload(); }
+    catch (err) { toast.error(err?.message || 'Could not add holder'); }
+  };
+  const remove = async (h) => {
+    const ok = await confirm({ title: 'Remove holder?', message: `Remove ${h.customer_name || 'this holder'} from the account?`, confirmLabel: 'Remove', tone: 'danger' });
+    if (!ok) return;
+    try { await AccountApi.removeHolder(accountId, h.holder_id); toast.success('Holder removed'); q.reload(); }
+    catch (err) { toast.error(err?.message || 'Could not remove'); }
+  };
+
+  const filtered = (results.data || []).filter((c) => c.name?.toLowerCase().includes(query.trim().toLowerCase()));
+
+  return (
+    <Card>
+      <CardHeader title="Account holders" icon={Users} subtitle="Primary owner and joint / authorized holders" />
+      <div className="p-4 space-y-4">
+        <div className="space-y-2">
+          {q.loading ? <div className="flex items-center gap-2 text-slate-400 text-sm py-2"><Spinner size={15} /> Loading…</div>
+            : (q.data || []).map((h) => (
+              <div key={h.holder_id || h.customer_id} className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-teal-500/10 text-teal-600 text-2xs font-semibold">{initials(h.customer_name || '?')}</span>
+                  <div>
+                    <div className="text-sm font-medium text-slate-800">{h.customer_name || h.customer_id?.slice(0, 8)}</div>
+                    <div className="text-2xs text-slate-400 num">{(h.customer_id || '').slice(0, 12)}</div>
+                  </div>
+                  <Badge tone={h.role === 'primary' ? 'brand' : 'neutral'}>{h.role}</Badge>
+                </div>
+                {h.role !== 'primary' && <button onClick={() => remove(h)} className="text-slate-300 hover:text-danger-600"><Trash2 size={15} /></button>}
+              </div>
+            ))}
+        </div>
+
+        <div className="rounded-lg border border-slate-200 p-3">
+          <div className="text-xs font-medium text-slate-600 mb-2">Add joint / authorized holder</div>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search customer by name…" />
+              {query.trim().length >= 2 && filtered.length > 0 && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-pop max-h-56 overflow-y-auto">
+                  {filtered.map((c) => (
+                    <button key={c.customer_id} onClick={() => add(c.customer_id)} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50">
+                      {c.name} <span className="text-xs text-slate-400">· {(c.customer_id || '').slice(0, 8)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <select value={role} onChange={(e) => setRole(e.target.value)} className="h-9 px-2 text-sm border border-slate-300 rounded-md bg-white">
+              <option value="joint">joint</option>
+              <option value="authorized">authorized</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </Card>
   );
 }
