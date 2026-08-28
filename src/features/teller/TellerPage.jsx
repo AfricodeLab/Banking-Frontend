@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Banknote, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, CheckCircle2, Receipt,
-  RotateCcw, User, Calculator, Coins, Clock, Building2, CircleUser, ArrowRight,
+  RotateCcw, User, Calculator, Coins, Clock, Building2, CircleUser, ArrowRight, Printer, Wallet, Scale,
 } from 'lucide-react';
 import { TransactionApi, TellerApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
@@ -45,6 +45,7 @@ export function TellerPage() {
   const [busy, setBusy] = useState(false);
   const [receipt, setReceipt] = useState(null);
   const [journalTab, setJournalTab] = useState('session');
+  const [acctQuery, setAcctQuery] = useState('');
 
   // Teller session is server-derived and paginated: this teller's own transactions for today,
   // attributed by teller_id on the backend. Aggregates (count + cash) come over the full day.
@@ -80,6 +81,12 @@ export function TellerPage() {
   }, [params]);
 
   const acctById = useMemo(() => Object.fromEntries(accounts.map((a) => [a.account_id, a])), [accounts]);
+  // Fast account/customer filter for the pickers.
+  const filteredAccounts = useMemo(() => {
+    const q = acctQuery.trim().toLowerCase();
+    if (!q) return accounts;
+    return accounts.filter((a) => [a.customer_name, a.account_number, a.account_id, a.account_type].filter(Boolean).some((v) => String(v).toLowerCase().includes(q)));
+  }, [accounts, acctQuery]);
   const debitAcct = op === 'deposit' ? null : acctById[from];
   const creditAcct = op === 'withdrawal' ? null : acctById[to];
   const cashAcct = op === 'deposit' ? creditAcct : debitAcct; // the customer side of a cash op
@@ -178,20 +185,36 @@ export function TellerPage() {
       {/* Till status bar */}
       <div className="card px-4 py-3 mb-4 flex flex-wrap items-center gap-x-6 gap-y-2">
         <div className="flex items-center gap-2 pr-6 border-r border-slate-100">
-          <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-brand-50 text-brand-600"><Building2 size={18} /></span>
+          <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-brand-50 text-brand-600"><CircleUser size={18} /></span>
           <div>
-            <div className="text-sm font-semibold text-slate-800">Till 01 · Accra Main</div>
-            <div className="text-2xs text-slate-400 flex items-center gap-1"><CircleUser size={11} /> {user?.first_name ? `${user.first_name} ${user.last_name || ''}` : user?.username}</div>
+            <div className="text-sm font-semibold text-slate-800">{user?.first_name ? `${user.first_name} ${user.last_name || ''}` : user?.username}</div>
+            <div className="text-2xs text-slate-400 flex items-center gap-1"><Building2 size={11} /> Teller · {(user?.user_id || '').slice(0, 8)}</div>
           </div>
         </div>
         <TillStat label="Session txns" value={sessionCount} />
         <TillStat label="Cash in" value={formatMoney(cashIn, 'GHS')} tone="success" />
         <TillStat label="Cash out" value={formatMoney(cashOut, 'GHS')} tone="danger" />
-        <TillStat label="Net position" value={formatMoney(net, 'GHS')} tone={net >= 0 ? 'success' : 'danger'} />
+        <TillStat label="Net" value={formatMoney(net, 'GHS')} tone={net >= 0 ? 'success' : 'danger'} />
         <div className="ml-auto flex items-center gap-1.5 text-xs text-slate-400">
           <Clock size={13} /> {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
         </div>
       </div>
+
+      {/* Cash position (from the open drawer session) */}
+      {drawerOpen && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
+          <PosTile icon={Wallet} label="Opening cash" value={formatMoney(drawer.data.session?.opening_cash, 'GHS')} />
+          <PosTile icon={ArrowDownLeft} label="Deposits" value={formatMoney(drawer.data.deposits, 'GHS')} tone="success" />
+          <PosTile icon={ArrowUpRight} label="Withdrawals" value={formatMoney(drawer.data.withdrawals, 'GHS')} tone="danger" />
+          <PosTile icon={Scale} label="Expected cash" value={formatMoney(drawer.data.expected_cash, 'GHS')} strong />
+          <button type="button" onClick={() => navigate('/cash-drawer')}
+            className="rounded-lg border border-dashed border-brand-300 bg-brand-50/50 hover:bg-brand-50 p-3 text-left transition-colors">
+            <Coins size={16} className="text-brand-500" />
+            <div className="text-sm font-medium text-brand-700 mt-1">Cash drawer →</div>
+            <div className="text-2xs text-slate-400">reconcile · vault · close</div>
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-[1.4fr_1fr] gap-4">
         {/* Operation panel */}
@@ -213,12 +236,19 @@ export function TellerPage() {
             </div>
 
             <form onSubmit={submit} className="space-y-4">
+              <Field label="Find customer / account">
+                <div className="relative">
+                  <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Input value={acctQuery} onChange={(e) => setAcctQuery(e.target.value)} placeholder="Search by name, account number or type…" className="pl-9" />
+                </div>
+                {acctQuery && <div className="text-2xs text-slate-400 mt-1">{filteredAccounts.length} match{filteredAccounts.length === 1 ? '' : 'es'}</div>}
+              </Field>
               {op !== 'deposit' && (
                 <div>
                   <Field label="Source account (debit)" required hint={loading ? 'Loading accounts…' : undefined}>
                     <Select value={from} onChange={(e) => setFrom(e.target.value)}>
                       <option value="">Select account…</option>
-                      {accounts.map((a) => <AccountOption key={a.account_id} a={a} />)}
+                      {filteredAccounts.map((a) => <AccountOption key={a.account_id} a={a} />)}
                     </Select>
                   </Field>
                   {debitAcct && <AccountChip a={debitAcct} />}
@@ -229,7 +259,7 @@ export function TellerPage() {
                   <Field label="Destination account (credit)" required hint={loading ? 'Loading accounts…' : undefined}>
                     <Select value={to} onChange={(e) => setTo(e.target.value)}>
                       <option value="">Select account…</option>
-                      {accounts.map((a) => <AccountOption key={a.account_id} a={a} />)}
+                      {filteredAccounts.map((a) => <AccountOption key={a.account_id} a={a} />)}
                     </Select>
                   </Field>
                   {creditAcct && <AccountChip a={creditAcct} />}
@@ -285,25 +315,13 @@ export function TellerPage() {
         {/* Right: preview/receipt + session journal */}
         <div className="space-y-4">
           {receipt ? (
-            <Card className="animate-scale-in">
-              <div className="p-5 text-center border-b border-slate-100">
-                <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-success-50 text-success-600 mb-2"><CheckCircle2 size={26} /></span>
-                <h3 className="text-base font-semibold text-slate-800">Transaction posted</h3>
-                <div className="num text-2xl font-semibold text-slate-900 mt-1">{formatMoney(receipt.amount, receipt.currency)}</div>
-                <div className="mt-2"><StatusPill status={receipt.status} /></div>
-              </div>
-              <div className="p-4 space-y-2.5 text-sm">
-                <Row label="Type" value={<span className="capitalize">{receipt.transaction_type}</span>} />
-                <Row label="Customer" value={receipt.party || '—'} />
-                <Row label="Reference" value={<span className="num text-xs">{receipt.reference_number}</span>} />
-              </div>
-              <div className="flex gap-2 p-4 border-t border-slate-100">
-                <Button variant="secondary" className="flex-1" icon={Receipt} onClick={() => setReceipt(null)}>New transaction</Button>
-                {(receipt.to_account_id || receipt.from_account_id) && (
-                  <Button className="flex-1" onClick={() => navigate(`/accounts/${receipt.to_account_id || receipt.from_account_id}`)}>View account</Button>
-                )}
-              </div>
-            </Card>
+            <TillReceipt
+              receipt={receipt}
+              acct={acctById[receipt.to_account_id || receipt.from_account_id]}
+              teller={user}
+              onNew={() => setReceipt(null)}
+              onView={() => navigate(`/accounts/${receipt.to_account_id || receipt.from_account_id}`)}
+            />
           ) : (
             <Card>
               <CardHeader title="Posting preview" icon={Calculator} />
@@ -460,4 +478,61 @@ function PreviewRow({ a, amt, dir }) {
 
 function Row({ label, value }) {
   return <div className="flex items-center justify-between gap-3"><span className="text-xs uppercase tracking-wide text-slate-400">{label}</span><span className="text-slate-700">{value}</span></div>;
+}
+
+// TillReceipt — a bank-style, printable receipt for a posted teller transaction.
+function TillReceipt({ receipt, acct, teller, onNew, onView }) {
+  const acctId = receipt.to_account_id || receipt.from_account_id || '';
+  const masked = acctId ? `••••${acctId.slice(-4)}` : '—';
+  const tellerName = teller?.first_name ? `${teller.first_name} ${teller.last_name || ''}`.trim() : (teller?.username || '—');
+  const when = receipt.transaction_date ? new Date(receipt.transaction_date) : new Date();
+  const pending = String(receipt.status).toLowerCase() === 'pending_approval';
+
+  return (
+    <Card className="animate-scale-in overflow-hidden">
+      <div className="print-area">
+        <div className={cn('p-5 text-center border-b border-dashed border-slate-200', pending ? 'bg-warning-50' : 'bg-success-50/50')}>
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-gradient-to-br from-brand-400 to-teal-500 text-white"><Building2 size={15} /></span>
+            <span className="text-sm font-semibold text-slate-800 tracking-tight">AfriCore · AfricodeLab</span>
+          </div>
+          <div className="text-2xs uppercase tracking-wider text-slate-400">Transaction receipt</div>
+          <div className="num text-2xl font-semibold text-slate-900 mt-2">{formatMoney(receipt.amount, receipt.currency)}</div>
+          <div className="mt-2"><StatusPill status={receipt.status} /></div>
+          {pending && <div className="text-2xs text-warning-700 mt-1.5">Awaiting supervisor approval — not yet posted</div>}
+        </div>
+        <div className="p-4 space-y-2.5 text-sm">
+          <Row label="Type" value={<span className="capitalize">{receipt.transaction_type}</span>} />
+          <Row label="Customer" value={receipt.party || '—'} />
+          <Row label="Account" value={<span className="num">{masked}</span>} />
+          {acct && <Row label="Balance" value={<span className="num">{formatMoney(acct.balance, acct.currency)}</span>} />}
+          <Row label="Reference" value={<span className="num text-xs">{receipt.reference_number}</span>} />
+          <Row label="Date / time" value={when.toLocaleString()} />
+          <Row label="Teller" value={tellerName} />
+          {receipt.description && <Row label="Narration" value={receipt.description} />}
+        </div>
+        <div className="px-4 pb-4 text-center text-2xs text-slate-400 border-t border-dashed border-slate-200 pt-3">
+          Thank you for banking with AfricodeLab · Keep this receipt for your records
+        </div>
+      </div>
+      <div className="flex gap-2 p-4 border-t border-slate-100 no-print">
+        <Button variant="secondary" className="flex-1" icon={Printer} onClick={() => window.print()}>Print</Button>
+        <Button variant="secondary" className="flex-1" icon={Receipt} onClick={onNew}>New</Button>
+        {acctId && <Button className="flex-1" onClick={onView}>Account</Button>}
+      </div>
+    </Card>
+  );
+}
+
+// PosTile — a compact cash-position tile for the teller header.
+function PosTile({ icon: Icon, label, value, tone, strong }) {
+  const toneCls = tone === 'success' ? 'text-success-600' : tone === 'danger' ? 'text-danger-600' : 'text-slate-900';
+  return (
+    <div className={cn('rounded-lg border p-3', strong ? 'border-brand-300 bg-brand-50' : 'border-slate-200 bg-white')}>
+      <div className="flex items-center gap-1.5 text-2xs uppercase tracking-wide text-slate-400">
+        {Icon && <Icon size={12} />}{label}
+      </div>
+      <div className={cn('num font-semibold mt-1', strong ? 'text-brand-800' : toneCls)}>{value}</div>
+    </div>
+  );
 }
