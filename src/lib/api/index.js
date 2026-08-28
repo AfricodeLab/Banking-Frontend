@@ -49,6 +49,14 @@ export const TransactionApi = {
   tellerToday: (params) => api.get('/transactions/teller/today', { params }),
 };
 
+// In-app notifications.
+export const NotificationApi = {
+  list: () => api.get('/notifications'),
+  unreadCount: () => api.get('/notifications/unread-count'),
+  markRead: (id) => api.post(`/notifications/${id}/read`, {}),
+  markAllRead: () => api.post('/notifications/read-all', {}),
+};
+
 // Teller cash-drawer / session.
 export const TellerApi = {
   current: () => api.get('/teller/sessions/current'),
