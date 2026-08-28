@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import {
-  ShieldCheck, UserCog, KeyRound, Building2, Plus, Trash2, Check, Users2, Search,
+  ShieldCheck, UserCog, KeyRound, Building2, Plus, Trash2, Check, Users2, Search, RotateCcw, Smartphone,
 } from 'lucide-react';
 import { RoleApi, PermissionApi, UserApi, BranchApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
+import { useAuth } from '../../lib/auth/AuthContext.jsx';
 import { asList } from '../accounts/accountsData.js';
 import {
   PageHeader, Card, CardHeader, Tabs, Badge, Button, Input, Select, Field, Modal, DataTable,
@@ -200,6 +201,9 @@ function PermissionsTab() {
 }
 
 function StaffTab() {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const { user: me, isAdmin } = useAuth();
   const [q, setQ] = useState('');
   const [addOpen, setAddOpen] = useState(false);
   const users = useAsync(() => UserApi.list().then(asList), []);
@@ -209,6 +213,70 @@ function StaffTab() {
     if (!term) return list;
     return list.filter((u) => [u.username, u.email, u.role_name, u.department].filter(Boolean).some((v) => String(v).toLowerCase().includes(term)));
   }, [list, q]);
+
+  const setRequire = async (u, required) => {
+    try {
+      await UserApi.requireMfa(u.user_id, required);
+      toast.success(required ? 'MFA now required' : 'MFA no longer required', { title: u.username });
+      users.reload();
+    } catch (err) { toast.error(err?.message || 'Could not update'); }
+  };
+
+  const resetMfa = async (u) => {
+    const ok = await confirm({
+      title: 'Reset this user’s MFA?',
+      message: `Clear two-factor for ${u.username}? They'll be able to enrol a new device the next time they sign in. Use this if they lost their authenticator.`,
+      confirmLabel: 'Reset MFA', tone: 'danger',
+    });
+    if (!ok) return;
+    try {
+      await UserApi.resetMfa(u.user_id);
+      toast.success('MFA reset', { title: u.username });
+      users.reload();
+    } catch (err) { toast.error(err?.message || 'Could not reset'); }
+  };
+
+  const mfaCell = (u) => (
+    u.mfa_enabled
+      ? <Badge tone="success">on</Badge>
+      : u.mfa_required
+        ? <Badge tone="warning">required · not set</Badge>
+        : <Badge tone="neutral">off</Badge>
+  );
+
+  const columns = [
+    {
+      key: 'user', header: 'Staff',
+      render: (u) => (
+        <div className="flex items-center gap-2.5">
+          <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-navy-900 text-white text-2xs font-semibold shrink-0">{initials(`${u.first_name || ''} ${u.last_name || u.username}`)}</span>
+          <div className="min-w-0"><div className="font-medium text-slate-800 truncate">{u.first_name ? `${u.first_name} ${u.last_name || ''}` : u.username}</div><div className="text-xs text-slate-400 truncate">{u.email || u.username}</div></div>
+        </div>
+      ),
+    },
+    { key: 'role_name', header: 'Role', render: (u) => <span className="capitalize">{String(u.role_name || '—').replace(/_/g, ' ')}</span> },
+    { key: 'department', header: 'Department', render: (u) => <Badge tone="brand">{u.department || '—'}</Badge> },
+    { key: 'is_active', header: 'Status', render: (u) => <StatusPill status={u.is_active ? 'active' : 'inactive'} /> },
+    { key: 'mfa', header: <span className="inline-flex items-center gap-1"><Smartphone size={12} /> MFA</span>, render: mfaCell },
+  ];
+  if (isAdmin) {
+    columns.push({
+      key: 'mfa_actions', header: '', align: 'right', width: '210px',
+      render: (u) => {
+        const isSelf = u.user_id === me?.user_id;
+        return (
+          <div className="flex items-center justify-end gap-1.5">
+            {u.mfa_required
+              ? <Button size="xs" variant="ghost" onClick={() => setRequire(u, false)} disabled={isSelf} title={isSelf ? 'You cannot change your own requirement here' : undefined}>Unrequire</Button>
+              : <Button size="xs" variant="ghost" icon={ShieldCheck} onClick={() => setRequire(u, true)}>Require</Button>}
+            {u.mfa_enabled && !isSelf && <Button size="xs" variant="ghost" icon={RotateCcw} onClick={() => resetMfa(u)}>Reset</Button>}
+          </div>
+        );
+      },
+    });
+  } else {
+    columns.push({ key: 'created_at', header: 'Added', align: 'right', render: (u) => <span className="text-slate-500 text-xs">{formatDate(u.created_at)}</span> });
+  }
 
   return (
     <Card>
@@ -220,21 +288,7 @@ function StaffTab() {
         <Button icon={Plus} onClick={() => setAddOpen(true)}>Add staff</Button>
       </div>
       <DataTable
-        columns={[
-          {
-            key: 'user', header: 'Staff',
-            render: (u) => (
-              <div className="flex items-center gap-2.5">
-                <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-navy-900 text-white text-2xs font-semibold shrink-0">{initials(`${u.first_name || ''} ${u.last_name || u.username}`)}</span>
-                <div className="min-w-0"><div className="font-medium text-slate-800 truncate">{u.first_name ? `${u.first_name} ${u.last_name || ''}` : u.username}</div><div className="text-xs text-slate-400 truncate">{u.email || u.username}</div></div>
-              </div>
-            ),
-          },
-          { key: 'role_name', header: 'Role', render: (u) => <span className="capitalize">{String(u.role_name || '—').replace(/_/g, ' ')}</span> },
-          { key: 'department', header: 'Department', render: (u) => <Badge tone="brand">{u.department || '—'}</Badge> },
-          { key: 'is_active', header: 'Status', render: (u) => <StatusPill status={u.is_active ? 'active' : 'inactive'} /> },
-          { key: 'created_at', header: 'Added', align: 'right', render: (u) => <span className="text-slate-500 text-xs">{formatDate(u.created_at)}</span> },
-        ]}
+        columns={columns}
         rows={users.loading ? null : rows} loading={users.loading} error={users.error} rowKey={(u) => u.user_id} pageSize={12}
         empty={{ icon: Users2, title: 'No staff users', description: 'Add a staff member to grant them access.' }}
       />

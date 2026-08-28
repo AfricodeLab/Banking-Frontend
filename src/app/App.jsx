@@ -5,6 +5,7 @@ import { ToastProvider, ConfirmProvider } from '../components/ui/index.js';
 import { AppShell } from '../components/layout/AppShell.jsx';
 import { RequireAuth } from './RequireAuth.jsx';
 import { CustomerPortal } from '../features/portal/CustomerPortal.jsx';
+import { ForcedMFAGate } from '../features/settings/ForcedMFAGate.jsx';
 
 import { LoginPage } from '../features/auth/LoginPage.jsx';
 import { DashboardPage } from '../features/dashboard/DashboardPage.jsx';
@@ -54,6 +55,16 @@ export default function App() {
 function AppRoutes() {
   const { isAuthenticated, user } = useAuth();
   const isCustomer = isAuthenticated && !!user?.customer_id;
+  // Staff whose role/account requires MFA but haven't enrolled are gated until they do.
+  const mustEnrolMFA = isAuthenticated && !isCustomer && user?.mfa_required && !user?.mfa_enabled;
+
+  if (mustEnrolMFA) {
+    return (
+      <Routes>
+        <Route path="*" element={<RequireAuth><ForcedMFAGate /></RequireAuth>} />
+      </Routes>
+    );
+  }
 
   if (isCustomer) {
     return (

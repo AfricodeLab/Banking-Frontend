@@ -32,6 +32,8 @@ export const AccountApi = {
   cards: (id) => api.get(`/accounts/${id}/cards`),
   createCard: (id, payload) => api.post(`/accounts/${id}/cards`, payload),
   transactions: (id) => api.get(`/accounts/${id}/transactions`),
+  limits: (id) => api.get(`/accounts/${id}/limits`),
+  setLimits: (id, payload) => api.put(`/accounts/${id}/limits`, payload),
 };
 
 export const TransactionApi = {
@@ -129,6 +131,10 @@ export const PermissionApi = {
 export const UserApi = {
   list: () => api.get('/users'),
   register: (payload) => api.post('/auth/register', payload, { auth: false }),
+  // Admin MFA management.
+  requireMfa: (userId, required) => api.post('/admin/mfa/require', { user_id: userId, required }),
+  requireMfaByRole: (roleId, required) => api.post('/admin/mfa/require', { role_id: roleId, required }),
+  resetMfa: (userId) => api.post('/admin/mfa/reset', { user_id: userId }),
 };
 
 export const EmployeeApi = {

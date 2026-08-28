@@ -45,7 +45,7 @@ export function SecuritySettingsPage() {
   );
 }
 
-function EnableFlow({ onDone }) {
+export function EnableFlow({ onDone }) {
   const toast = useToast();
   const [step, setStep] = useState('idle'); // idle -> scan -> codes
   const [setup, setSetup] = useState(null); // { secret, otpauth_uri }

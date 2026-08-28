@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Wallet, Receipt, CreditCard, Banknote, Snowflake, Power, ArrowDownLeft, ArrowUpRight, User, FileText } from 'lucide-react';
+import { ArrowLeft, Wallet, Receipt, CreditCard, Banknote, Snowflake, Power, ArrowDownLeft, ArrowUpRight, User, FileText, Gauge, Pencil } from 'lucide-react';
 import { AccountApi, TransactionApi, CustomerApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
-import { Card, CardHeader, Tabs, StatusPill, Badge, Button, DataTable, Spinner, useToast, useConfirm } from '../../components/ui/index.js';
+import { Card, CardHeader, Tabs, StatusPill, Badge, Button, DataTable, Spinner, Modal, Field, Input, useToast, useConfirm } from '../../components/ui/index.js';
+import { useAuth } from '../../lib/auth/AuthContext.jsx';
 import { formatMoney, formatDateTime, formatDate } from '../../lib/format.js';
 import { asList } from './accountsData.js';
 import { useLeafCrumb } from '../../components/layout/Breadcrumbs.jsx';
@@ -138,6 +139,7 @@ export function AccountDetailPage() {
         tabs={[
           { value: 'transactions', label: 'Transactions', count: txList.length },
           { value: 'cards', label: 'Cards', count: cardList.length },
+          { value: 'limits', label: 'Limits' },
           { value: 'details', label: 'Details' },
         ]}
         className="mb-4"
@@ -167,6 +169,8 @@ export function AccountDetailPage() {
         </Card>
       )}
 
+      {tab === 'limits' && <WithdrawalLimits accountId={id} currency={a.currency} />}
+
       {tab === 'details' && (
         <Card>
           <CardHeader title="Account details" icon={Wallet} />
@@ -192,5 +196,95 @@ function Detail({ label, value, mono }) {
       <div className="text-2xs uppercase tracking-wide text-slate-400">{label}</div>
       <div className={`text-slate-700 mt-0.5 ${mono ? 'num' : ''}`}>{value}</div>
     </div>
+  );
+}
+
+// WithdrawalLimits shows an account's per-transaction / daily / monthly caps with usage,
+// and lets authorised staff adjust them. "0" means no limit.
+function WithdrawalLimits({ accountId, currency }) {
+  const { can } = useAuth();
+  const limits = useAsync(() => AccountApi.limits(accountId), [accountId]);
+  const [editing, setEditing] = useState(false);
+  const d = limits.data;
+  const editable = can('update_account');
+
+  const fmtLimit = (v) => (Number(v) > 0 ? formatMoney(v, currency) : 'No limit');
+
+  return (
+    <Card>
+      <CardHeader title="Withdrawal limits" icon={Gauge} subtitle="Caps on outgoing withdrawals & transfers"
+        actions={editable ? <Button size="sm" variant="secondary" icon={Pencil} onClick={() => setEditing(true)}>Edit limits</Button> : null} />
+      {limits.loading ? (
+        <div className="flex items-center gap-2 text-slate-400 text-sm p-6"><Spinner size={16} /> Loading…</div>
+      ) : limits.error ? (
+        <div className="p-6 text-sm text-danger-600">{String(limits.error.message)}</div>
+      ) : (
+        <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <LimitTile label="Per transaction" value={fmtLimit(d.withdrawal_limit_per_txn)} />
+          <LimitTile label="Daily" value={fmtLimit(d.withdrawal_limit_daily)}
+            used={Number(d.withdrawal_limit_daily) > 0 ? `${formatMoney(d.used_today, currency)} used · ${formatMoney(d.remaining_today, currency)} left today` : null} />
+          <LimitTile label="Monthly" value={fmtLimit(d.withdrawal_limit_monthly)}
+            used={Number(d.withdrawal_limit_monthly) > 0 ? `${formatMoney(d.used_month, currency)} used · ${formatMoney(d.remaining_month, currency)} left this month` : null} />
+        </div>
+      )}
+
+      {editing && d && (
+        <EditLimitsModal accountId={accountId} current={d} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); limits.reload(); }} />
+      )}
+    </Card>
+  );
+}
+
+function LimitTile({ label, value, used }) {
+  return (
+    <div className="rounded-lg border border-slate-200 p-3.5">
+      <div className="text-2xs uppercase tracking-wide text-slate-400">{label}</div>
+      <div className="num text-lg font-semibold text-slate-900 mt-1">{value}</div>
+      {used && <div className="text-xs text-slate-400 mt-1">{used}</div>}
+    </div>
+  );
+}
+
+function EditLimitsModal({ accountId, current, onClose, onSaved }) {
+  const toast = useToast();
+  const [form, setForm] = useState({
+    per_txn: String(current.withdrawal_limit_per_txn || 0),
+    daily: String(current.withdrawal_limit_daily || 0),
+    monthly: String(current.withdrawal_limit_monthly || 0),
+  });
+  const [busy, setBusy] = useState(false);
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const submit = async () => {
+    const nums = [form.per_txn, form.daily, form.monthly].map((v) => parseFloat(v || '0'));
+    if (nums.some((n) => Number.isNaN(n) || n < 0)) return toast.error('Enter valid, non-negative amounts');
+    setBusy(true);
+    try {
+      await AccountApi.setLimits(accountId, {
+        withdrawal_limit_per_txn: String(nums[0].toFixed(2)),
+        withdrawal_limit_daily: String(nums[1].toFixed(2)),
+        withdrawal_limit_monthly: String(nums[2].toFixed(2)),
+      });
+      toast.success('Withdrawal limits updated');
+      onSaved?.();
+    } catch (err) { toast.error(err?.message || 'Could not update limits'); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <Modal open onClose={onClose} title="Edit withdrawal limits" subtitle="Enter 0 for no limit"
+      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={busy} onClick={submit}>Save limits</Button></>}>
+      <div className="space-y-4">
+        <Field label="Per-transaction limit" hint="Maximum for a single withdrawal or transfer.">
+          <Input type="number" step="0.01" min="0" value={form.per_txn} onChange={set('per_txn')} mono />
+        </Field>
+        <Field label="Daily limit" hint="Maximum total withdrawn per day.">
+          <Input type="number" step="0.01" min="0" value={form.daily} onChange={set('daily')} mono />
+        </Field>
+        <Field label="Monthly limit" hint="Maximum total withdrawn per calendar month.">
+          <Input type="number" step="0.01" min="0" value={form.monthly} onChange={set('monthly')} mono />
+        </Field>
+      </div>
+    </Modal>
   );
 }
