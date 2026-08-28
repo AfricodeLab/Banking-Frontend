@@ -65,6 +65,7 @@ export const TellerApi = {
   deposit: (payload, key) => api.post('/teller/cash/deposit', payload, key ? { headers: { 'Idempotency-Key': key } } : undefined),
   withdraw: (payload, key) => api.post('/teller/cash/withdraw', payload, key ? { headers: { 'Idempotency-Key': key } } : undefined),
   vault: (payload) => api.post('/teller/cash/vault', payload),
+  adjust: (payload) => api.post('/teller/cash/adjust', payload),
   movements: () => api.get('/teller/cash/movements'),
 };
 

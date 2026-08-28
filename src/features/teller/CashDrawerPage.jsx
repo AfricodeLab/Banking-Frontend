@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { TellerApi, BranchApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
+import { useAuth } from '../../lib/auth/AuthContext.jsx';
 import { asList } from '../accounts/accountsData.js';
 import {
   PageHeader, Card, CardHeader, Button, Field, Input, Select, Badge, DataTable, Spinner,
@@ -138,6 +139,7 @@ function OpenDrawer({ summary, onChanged }) {
         {/* Actions */}
         <div className="space-y-4">
           <VaultCard onDone={reload} />
+          <AdjustCard onDone={reload} />
           <Button variant="danger" icon={LockKeyhole} className="w-full" onClick={() => setClosing(true)}>Close session (end of day)</Button>
         </div>
       </div>
@@ -186,6 +188,40 @@ function VaultCard({ onDone }) {
         </div>
         <Input type="number" step="0.01" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} mono placeholder="Amount (GHS)" />
         <Button variant="secondary" icon={Vault} loading={busy} onClick={submit} className="w-full">{kind === 'request' ? 'Receive from vault' : 'Return to vault'}</Button>
+      </div>
+    </Card>
+  );
+}
+
+// AdjustCard — supervisor-only signed cash adjustment (needs approve_transaction).
+function AdjustCard({ onDone }) {
+  const toast = useToast();
+  const { can } = useAuth();
+  const [amount, setAmount] = useState('');
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  if (!can('approve_transaction')) return null;
+
+  const submit = async () => {
+    const amt = parseFloat(amount || '0');
+    if (!amt || Number.isNaN(amt)) return toast.error('Enter a non-zero amount (use − for shortages)');
+    if (!note.trim()) return toast.error('A reason is required');
+    setBusy(true);
+    try {
+      await TellerApi.adjust({ amount: String(amt.toFixed(2)), note: note.trim() });
+      toast.success('Adjustment posted');
+      setAmount(''); setNote(''); onDone?.();
+    } catch (err) { toast.error(err?.message || 'Adjustment failed'); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <Card>
+      <CardHeader title="Cash adjustment" icon={Scale} subtitle="Supervisor · signed (− for shortage)" />
+      <div className="p-4 space-y-3">
+        <Input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} mono placeholder="e.g. -50.00" />
+        <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Reason (required)" />
+        <Button variant="secondary" icon={Scale} loading={busy} onClick={submit} className="w-full">Post adjustment</Button>
       </div>
     </Card>
   );
