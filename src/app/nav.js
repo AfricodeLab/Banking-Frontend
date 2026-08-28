@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, Wallet, Banknote, ArrowLeftRight, Receipt,
   Landmark, PiggyBank, CreditCard, ShieldCheck, Building2, UserCog,
-  ScrollText, BarChart3, Repeat, Code2, UserCheck, Radio, Coins,
+  ScrollText, BarChart3, Repeat, Code2, UserCheck, Radio, Coins, ShieldAlert,
 } from 'lucide-react';
 
 /**
@@ -46,6 +46,7 @@ export const NAV_GROUPS = [
     label: 'Risk & Compliance',
     items: [
       { to: '/compliance', label: 'KYC / AML', icon: ShieldCheck },
+      { to: '/risk', label: 'Risk & Fraud', icon: ShieldAlert },
     ],
   },
   {

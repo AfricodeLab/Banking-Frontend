@@ -31,6 +31,7 @@ import { ApprovalsPage } from '../features/approvals/ApprovalsPage.jsx';
 import { SecuritySettingsPage } from '../features/settings/SecuritySettingsPage.jsx';
 import { RailsPage } from '../features/rails/RailsPage.jsx';
 import { CashDrawerPage } from '../features/teller/CashDrawerPage.jsx';
+import { RiskAlertsPage } from '../features/risk/RiskAlertsPage.jsx';
 import { AuditPage } from '../features/audit/AuditPage.jsx';
 import { FxPage } from '../features/fx/FxPage.jsx';
 import { UsersRolesPage } from '../features/admin/UsersRolesPage.jsx';
@@ -103,6 +104,7 @@ function AppRoutes() {
               <Route path="deposits" element={<DepositsListPage />} />
               <Route path="deposits/new" element={<BookDepositPage />} />
               <Route path="compliance" element={<CompliancePage />} />
+              <Route path="risk" element={<RiskAlertsPage />} />
               <Route path="branches" element={<BranchesListPage />} />
               <Route path="admin/users" element={<UsersRolesPage />} />
               <Route path="developers" element={<DeveloperPage />} />

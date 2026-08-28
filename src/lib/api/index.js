@@ -55,6 +55,12 @@ export const TransactionApi = {
   tellerToday: (params) => api.get('/transactions/teller/today', { params }),
 };
 
+// Fraud / risk alerts.
+export const RiskApi = {
+  alerts: (status) => api.get('/risk/alerts', { params: status ? { status } : {} }),
+  decide: (id, status, note) => api.post(`/risk/alerts/${id}/decide`, { status, note }),
+};
+
 // In-app notifications.
 export const NotificationApi = {
   list: () => api.get('/notifications'),
