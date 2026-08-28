@@ -9,6 +9,7 @@ import {
 import { formatMoney, formatDateTime } from '../../lib/format.js';
 
 const SEV_TONE = { high: 'danger', medium: 'warning', low: 'neutral' };
+const DEC_TONE = { BLOCK: 'danger', REVIEW: 'warning', ALLOW: 'success' };
 const STATUSES = [{ value: 'open', label: 'Open' }, { value: 'reviewed', label: 'Reviewed' }, { value: 'cleared', label: 'Cleared' }, { value: '', label: 'All' }];
 
 export function RiskAlertsPage() {
@@ -33,7 +34,24 @@ export function RiskAlertsPage() {
 
   const columns = [
     { key: 'severity', header: 'Severity', render: (a) => <Badge tone={SEV_TONE[a.severity] || 'neutral'}>{a.severity}</Badge> },
-    { key: 'reasons', header: 'Flags', render: (a) => <span className="text-slate-700">{a.reasons}</span> },
+    {
+      key: 'reasons', header: 'Flags', render: (a) => (
+        <div>
+          <div className="text-slate-700">{a.reasons}</div>
+          <div className="text-2xs text-slate-400 mt-0.5">source: {a.source || 'rules'}</div>
+        </div>
+      ),
+    },
+    {
+      key: 'ai', header: 'AI verdict', render: (a) => (
+        (a.decision || Number(a.score) > 0)
+          ? <div className="flex items-center gap-1.5">
+              {a.decision && <Badge tone={DEC_TONE[a.decision] || 'neutral'}>{a.decision}</Badge>}
+              {Number(a.score) > 0 && <span className="num text-xs text-slate-500">{Math.round(Number(a.score) * 100)}%</span>}
+            </div>
+          : <span className="text-2xs text-slate-300">—</span>
+      ),
+    },
     { key: 'account_id', header: 'Account', className: 'num text-xs text-slate-400', render: (a) => a.account_id ? `${a.account_id.slice(0, 10)}…` : '—' },
     { key: 'created_at', header: 'When', render: (a) => <span className="text-slate-500 text-xs">{formatDateTime(a.created_at)}</span> },
     { key: 'status', header: 'Status', render: (a) => <Badge tone={a.status === 'open' ? 'warning' : a.status === 'cleared' ? 'success' : 'neutral'}>{a.status}</Badge> },
@@ -51,7 +69,7 @@ export function RiskAlertsPage() {
 
   return (
     <div>
-      <PageHeader title="Risk & Fraud Alerts" description="Transactions flagged by monitoring rules — review and clear" />
+      <PageHeader title="Risk & Fraud Alerts" description="Transactions flagged by rules + the Sentinel AI service — review and clear" />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-5">
         <StatCard label="Open alerts" value={data?.open ?? (loading ? '—' : 0)} icon={ShieldAlert} accent="danger" />
