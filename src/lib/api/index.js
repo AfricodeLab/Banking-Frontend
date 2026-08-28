@@ -156,6 +156,7 @@ export const UserApi = {
   requireMfaByRole: (roleId, required) => api.post('/admin/mfa/require', { role_id: roleId, required }),
   requireMfaAll: (required) => api.post('/admin/mfa/require', { all: true, required }),
   resetMfa: (userId) => api.post('/admin/mfa/reset', { user_id: userId }),
+  setTellerLimit: (userId, limit) => api.put(`/users/${userId}/teller-limit`, { limit }),
 };
 
 export const EmployeeApi = {

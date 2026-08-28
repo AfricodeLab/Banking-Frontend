@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
-  ShieldCheck, UserCog, KeyRound, Building2, Plus, Trash2, Check, Users2, Search, RotateCcw, Smartphone,
+  ShieldCheck, UserCog, KeyRound, Building2, Plus, Trash2, Check, Users2, Search, RotateCcw, Smartphone, Gauge,
 } from 'lucide-react';
 import { RoleApi, PermissionApi, UserApi, BranchApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
@@ -10,7 +10,7 @@ import {
   PageHeader, Card, CardHeader, Tabs, Badge, Button, Input, Select, Field, Modal, DataTable,
   StatusPill, Spinner, EmptyState, useToast, useConfirm,
 } from '../../components/ui/index.js';
-import { formatDate, initials } from '../../lib/format.js';
+import { formatDate, formatMoney, initials } from '../../lib/format.js';
 import { cn } from '../../lib/cn.js';
 
 const DEPARTMENTS = [
@@ -206,6 +206,7 @@ function StaffTab() {
   const { user: me, isAdmin } = useAuth();
   const [q, setQ] = useState('');
   const [addOpen, setAddOpen] = useState(false);
+  const [limitFor, setLimitFor] = useState(null);
   const users = useAsync(() => UserApi.list().then(asList), []);
   const list = users.data || [];
   const rows = useMemo(() => {
@@ -272,14 +273,16 @@ function StaffTab() {
     { key: 'department', header: 'Department', render: (u) => <Badge tone="brand">{u.department || '—'}</Badge> },
     { key: 'is_active', header: 'Status', render: (u) => <StatusPill status={u.is_active ? 'active' : 'inactive'} /> },
     { key: 'mfa', header: <span className="inline-flex items-center gap-1"><Smartphone size={12} /> MFA</span>, render: mfaCell },
+    { key: 'teller_limit', header: 'Teller limit', align: 'right', render: (u) => <span className="num text-xs text-slate-500">{Number(u.teller_limit) > 0 ? formatMoney(u.teller_limit, 'GHS') : 'none'}</span> },
   ];
   if (isAdmin) {
     columns.push({
-      key: 'mfa_actions', header: '', align: 'right', width: '210px',
+      key: 'mfa_actions', header: '', align: 'right', width: '280px',
       render: (u) => {
         const isSelf = u.user_id === me?.user_id;
         return (
           <div className="flex items-center justify-end gap-1.5">
+            <Button size="xs" variant="ghost" icon={Gauge} onClick={() => setLimitFor(u)}>Limit</Button>
             {u.mfa_required
               ? <Button size="xs" variant="ghost" onClick={() => setRequire(u, false)} disabled={isSelf} title={isSelf ? 'You cannot change your own requirement here' : undefined}>Unrequire</Button>
               : <Button size="xs" variant="ghost" icon={ShieldCheck} onClick={() => setRequire(u, true)}>Require</Button>}
@@ -308,7 +311,37 @@ function StaffTab() {
         empty={{ icon: Users2, title: 'No staff users', description: 'Add a staff member to grant them access.' }}
       />
       <AddStaffModal open={addOpen} onClose={() => setAddOpen(false)} onCreated={() => users.reload()} />
+      <TellerLimitModal staff={limitFor} onClose={() => setLimitFor(null)} onSaved={() => { setLimitFor(null); users.reload(); }} />
     </Card>
+  );
+}
+
+function TellerLimitModal({ staff, onClose, onSaved }) {
+  const toast = useToast();
+  const [limit, setLimit] = useState('');
+  const [busy, setBusy] = useState(false);
+  React.useEffect(() => { if (staff) setLimit(String(Number(staff.teller_limit) || 0)); }, [staff]);
+  if (!staff) return null;
+
+  const submit = async () => {
+    const n = parseFloat(limit || '0');
+    if (Number.isNaN(n) || n < 0) return toast.error('Enter a valid amount (0 = no limit)');
+    setBusy(true);
+    try {
+      await UserApi.setTellerLimit(staff.user_id, String(n.toFixed(2)));
+      toast.success('Teller limit updated', { title: staff.username });
+      onSaved?.();
+    } catch (err) { toast.error(err?.message || 'Could not update limit'); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <Modal open onClose={onClose} title="Teller cash limit" subtitle={`${staff.username} — max single cash transaction before supervisor approval`}
+      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={busy} onClick={submit}>Save limit</Button></>}>
+      <Field label="Per-transaction limit (GHS)" hint="Enter 0 for no personal limit (the global approval threshold still applies).">
+        <Input type="number" step="0.01" min="0" value={limit} onChange={(e) => setLimit(e.target.value)} mono placeholder="0.00" />
+      </Field>
+    </Modal>
   );
 }
 
