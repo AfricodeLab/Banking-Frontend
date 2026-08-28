@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, Wallet, Banknote, ArrowLeftRight, Receipt,
   Landmark, PiggyBank, CreditCard, ShieldCheck, Building2, UserCog,
-  ScrollText, BarChart3, Repeat, Code2, UserCheck,
+  ScrollText, BarChart3, Repeat, Code2, UserCheck, Radio,
 } from 'lucide-react';
 
 /**
@@ -28,6 +28,7 @@ export const NAV_GROUPS = [
     items: [
       { to: '/teller', label: 'Teller', icon: Banknote },
       { to: '/payments', label: 'Payments & Transfers', icon: ArrowLeftRight },
+      { to: '/rails', label: 'Payment Rails', icon: Radio },
       { to: '/transactions', label: 'Transactions', icon: Receipt },
       { to: '/approvals', label: 'Approvals', icon: UserCheck, permission: 'approve_transaction' },
       { to: '/fx', label: 'Foreign Exchange', icon: Repeat },

@@ -27,6 +27,7 @@ import { ReportsPage } from '../features/reports/ReportsPage.jsx';
 import { PaymentsPage } from '../features/payments/PaymentsPage.jsx';
 import { ApprovalsPage } from '../features/approvals/ApprovalsPage.jsx';
 import { SecuritySettingsPage } from '../features/settings/SecuritySettingsPage.jsx';
+import { RailsPage } from '../features/rails/RailsPage.jsx';
 import { AuditPage } from '../features/audit/AuditPage.jsx';
 import { FxPage } from '../features/fx/FxPage.jsx';
 import { UsersRolesPage } from '../features/admin/UsersRolesPage.jsx';
@@ -56,6 +57,7 @@ export default function App() {
               <Route path="payments" element={<PaymentsPage />} />
               <Route path="transactions" element={<TransactionsPage />} />
               <Route path="approvals" element={<ApprovalsPage />} />
+              <Route path="rails" element={<RailsPage />} />
               <Route path="fx" element={<FxPage />} />
               <Route path="loans" element={<LoansListPage />} />
               <Route path="loans/new" element={<LoanCreatePage />} />

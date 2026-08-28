@@ -47,6 +47,13 @@ export const TransactionApi = {
   tellerToday: (params) => api.get('/transactions/teller/today', { params }),
 };
 
+// Outbound payment rails (GIP / MoMo / RTGS / SWIFT).
+export const PayoutApi = {
+  rails: () => api.get('/rails'),
+  list: (params) => api.get('/payouts', { params }),
+  create: (payload) => api.post('/payouts', payload),
+};
+
 // Maker-checker approval queue.
 export const ApprovalApi = {
   list: (params) => api.get('/approvals', { params }),

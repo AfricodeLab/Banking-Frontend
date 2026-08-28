@@ -21,8 +21,9 @@ export function Badge({ tone = 'neutral', className, children }) {
 
 // Maps common banking statuses to a tone + label.
 const STATUS_MAP = {
-  active: 'success', completed: 'success', approved: 'success', verified: 'success', posted: 'success', cleared: 'success',
-  pending: 'warning', review: 'warning', processing: 'warning', hold: 'warning', submitted: 'warning', pending_approval: 'warning',
+  active: 'success', completed: 'success', approved: 'success', verified: 'success', posted: 'success', cleared: 'success', settled: 'success',
+  pending: 'warning', review: 'warning', processing: 'warning', hold: 'warning', submitted: 'warning', pending_approval: 'warning', queued: 'warning',
+  sent: 'info',
   inactive: 'neutral', closed: 'neutral', cancelled: 'neutral', draft: 'neutral', dormant: 'neutral', reversed: 'neutral',
   failed: 'danger', rejected: 'danger', blocked: 'danger', overdue: 'danger', frozen: 'danger', blacklisted: 'danger', suspended: 'danger',
 };
@@ -42,6 +43,7 @@ export function StatusPill({ status, className }) {
         tone === 'success' && 'bg-success-500',
         tone === 'warning' && 'bg-warning-500',
         tone === 'danger' && 'bg-danger-500',
+        tone === 'info' && 'bg-info-500',
         tone === 'neutral' && 'bg-slate-400',
       )} />
       {label}
