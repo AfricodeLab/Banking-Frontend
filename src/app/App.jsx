@@ -26,6 +26,7 @@ import { TransactionsPage } from '../features/transactions/TransactionsPage.jsx'
 import { ReportsPage } from '../features/reports/ReportsPage.jsx';
 import { PaymentsPage } from '../features/payments/PaymentsPage.jsx';
 import { ApprovalsPage } from '../features/approvals/ApprovalsPage.jsx';
+import { SecuritySettingsPage } from '../features/settings/SecuritySettingsPage.jsx';
 import { AuditPage } from '../features/audit/AuditPage.jsx';
 import { FxPage } from '../features/fx/FxPage.jsx';
 import { UsersRolesPage } from '../features/admin/UsersRolesPage.jsx';
@@ -65,6 +66,7 @@ export default function App() {
               <Route path="branches" element={<BranchesListPage />} />
               <Route path="admin/users" element={<UsersRolesPage />} />
               <Route path="developers" element={<DeveloperPage />} />
+              <Route path="settings/security" element={<SecuritySettingsPage />} />
               <Route path="audit" element={<AuditPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="*" element={<NotFoundPage />} />

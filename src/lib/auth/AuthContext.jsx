@@ -25,10 +25,10 @@ export function AuthProvider({ children }) {
     saveJSON(PERMS_KEY, arr);
   }, []);
 
-  const login = async (username, password) => {
+  const login = async (username, password, otp) => {
     setLoading(true);
     try {
-      const res = await AuthApi.login(username, password);
+      const res = await AuthApi.login(username, password, otp);
       setToken(res.token);
       setTok(res.token);
       setUser(res.user);
@@ -52,15 +52,22 @@ export function AuthProvider({ children }) {
     try { sessionStorage.clear(); } catch { /* ignore */ }
   };
 
-  // On mount (e.g. after a page reload) refresh permissions from the server so gating
-  // reflects the user's current role even if it changed since last login.
+  // Re-validate against the server and refresh permissions + MFA status. Used on mount
+  // (after a reload) and after security changes (e.g. enabling/disabling MFA).
+  const refreshSession = useCallback(async () => {
+    try {
+      const res = await AuthApi.validate();
+      if (res?.permissions) applyPerms(res.permissions);
+      setUser((u) => {
+        const next = { ...(u || {}), mfa_enabled: !!res?.mfa_enabled };
+        saveJSON(USER_KEY, next);
+        return next;
+      });
+    } catch { /* keep cached state; token errors surface on the next real request */ }
+  }, [applyPerms]);
+
   useEffect(() => {
-    let cancelled = false;
-    if (token) {
-      AuthApi.validate()
-        .then((res) => { if (!cancelled && res?.permissions) applyPerms(res.permissions); })
-        .catch(() => { /* keep cached perms; token errors surface on the next real request */ });
-    }
+    if (token) refreshSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -78,8 +85,8 @@ export function AuthProvider({ children }) {
   );
 
   const value = useMemo(
-    () => ({ user, token, permissions, loading, isAuthenticated: !!token, isAdmin, can, login, logout }),
-    [user, token, permissions, loading, isAdmin, can],
+    () => ({ user, token, permissions, loading, isAuthenticated: !!token, isAdmin, can, login, logout, refreshSession }),
+    [user, token, permissions, loading, isAdmin, can, refreshSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

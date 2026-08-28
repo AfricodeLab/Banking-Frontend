@@ -3,10 +3,14 @@ import { api } from './client.js';
 /** Grouped endpoint bindings for the Go core-banking API. */
 
 export const AuthApi = {
-  login: (username, password) => api.post('/auth/login', { username, password }, { auth: false }),
+  login: (username, password, otp) => api.post('/auth/login', { username, password, otp }, { auth: false }),
   register: (payload) => api.post('/auth/register', payload, { auth: false }),
   // Backend reads the bearer token from the Authorization header (attached by auth:true).
   validate: () => api.post('/auth/validate', undefined, { auth: true }),
+  // MFA enrolment (authenticated).
+  mfaSetup: () => api.post('/auth/mfa/setup', {}),
+  mfaEnable: (code) => api.post('/auth/mfa/enable', { code }),
+  mfaDisable: (code) => api.post('/auth/mfa/disable', { code }),
 };
 
 export const CustomerApi = {

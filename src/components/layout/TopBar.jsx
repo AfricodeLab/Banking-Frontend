@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Bell, ChevronDown, LogOut, Building2, CircleDot } from 'lucide-react';
+import { Search, Bell, ChevronDown, LogOut, Building2, CircleDot, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../lib/auth/AuthContext.jsx';
 import { SystemApi } from '../../lib/api/index.js';
 import { initials } from '../../lib/format.js';
@@ -80,6 +80,12 @@ export function TopBar({ onOpenCommand }) {
               <p className="text-sm font-medium text-slate-800 truncate">{user?.username}</p>
               <p className="text-xs text-slate-400 truncate">{user?.email}</p>
             </div>
+            <button
+              onClick={() => { setMenuOpen(false); navigate('/settings/security'); }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+            >
+              <ShieldCheck size={16} className="text-slate-400" /> Security
+            </button>
             <button
               onClick={() => { setMenuOpen(false); logout(); navigate('/login'); }}
               className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-danger-600 hover:bg-danger-50"

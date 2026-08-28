@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
-import { Landmark, Lock, User, ShieldCheck, TrendingUp, Globe2 } from 'lucide-react';
+import { Landmark, Lock, User, ShieldCheck, TrendingUp, Globe2, KeyRound, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../lib/auth/AuthContext.jsx';
 import { Button, Field, Input } from '../../components/ui/index.js';
 
@@ -8,6 +8,8 @@ export function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const [username, setUsername] = useState('dberks');
   const [password, setPassword] = useState('password123');
+  const [otp, setOtp] = useState('');
+  const [mfaStep, setMfaStep] = useState(false); // second factor prompt
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -22,14 +24,22 @@ export function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await login(username.trim(), password);
+      await login(username.trim(), password, mfaStep ? otp.trim() : undefined);
       navigate(from, { replace: true });
     } catch (err) {
-      setError(err?.message || 'Sign in failed. Check your credentials.');
+      // Password OK but a second factor is required — advance to the code step.
+      if (err?.status === 401 && err?.body?.mfa_required) {
+        setMfaStep(true);
+        setError('');
+      } else {
+        setError(err?.message || 'Sign in failed. Check your credentials.');
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  const backToPassword = () => { setMfaStep(false); setOtp(''); setError(''); };
 
   return (
     <div className="min-h-screen grid lg:grid-cols-[1.1fr_1fr]">
@@ -83,8 +93,10 @@ export function LoginPage() {
             <span className="text-lg font-semibold text-slate-800">AfriCore</span>
           </div>
 
-          <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">Sign in</h2>
-          <p className="text-sm text-slate-500 mt-1">Use your banking staff credentials to continue.</p>
+          <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">{mfaStep ? 'Two-factor authentication' : 'Sign in'}</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            {mfaStep ? 'Enter the 6-digit code from your authenticator app, or a recovery code.' : 'Use your banking staff credentials to continue.'}
+          </p>
 
           <form onSubmit={submit} className="mt-8 space-y-4">
             {error && (
@@ -93,26 +105,45 @@ export function LoginPage() {
               </div>
             )}
 
-            <Field label="User ID" htmlFor="username">
-              <div className="relative">
-                <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="e.g. dberks" className="pl-9" autoFocus />
-              </div>
-            </Field>
+            {!mfaStep ? (
+              <>
+                <Field label="User ID" htmlFor="username">
+                  <div className="relative">
+                    <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="e.g. dberks" className="pl-9" autoFocus />
+                  </div>
+                </Field>
 
-            <Field label="Password" htmlFor="password">
-              <div className="relative">
-                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="pl-9" />
-              </div>
-            </Field>
+                <Field label="Password" htmlFor="password">
+                  <div className="relative">
+                    <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="pl-9" />
+                  </div>
+                </Field>
 
-            <Button type="submit" size="lg" loading={loading} className="w-full">Sign in</Button>
+                <Button type="submit" size="lg" loading={loading} className="w-full">Sign in</Button>
+              </>
+            ) : (
+              <>
+                <Field label="Authentication code" htmlFor="otp">
+                  <div className="relative">
+                    <KeyRound size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Input id="otp" value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="123 456" className="pl-9 num tracking-widest" autoFocus inputMode="numeric" autoComplete="one-time-code" />
+                  </div>
+                </Field>
+                <Button type="submit" size="lg" loading={loading} className="w-full">Verify & sign in</Button>
+                <button type="button" onClick={backToPassword} className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 mx-auto">
+                  <ArrowLeft size={13} /> Back
+                </button>
+              </>
+            )}
           </form>
 
-          <div className="mt-6 rounded-md bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-slate-500">
-            <span className="font-medium text-slate-600">Demo access</span> — seeded admin <span className="num">dberks / password123</span>
-          </div>
+          {!mfaStep && (
+            <div className="mt-6 rounded-md bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-slate-500">
+              <span className="font-medium text-slate-600">Demo access</span> — seeded admin <span className="num">dberks / password123</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
