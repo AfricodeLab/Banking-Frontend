@@ -2,6 +2,7 @@ import {
   LayoutDashboard, Users, Wallet, Banknote, ArrowLeftRight, Receipt,
   Landmark, PiggyBank, CreditCard, ShieldCheck, Building2, UserCog,
   ScrollText, BarChart3, Repeat, Code2, UserCheck, Radio, Coins, ShieldAlert,
+  Package, FileWarning,
 } from 'lucide-react';
 
 /**
@@ -39,7 +40,8 @@ export const NAV_GROUPS = [
     label: 'Lending & Deposits',
     items: [
       { to: '/loans', label: 'Loans', icon: Landmark },
-      { to: '/deposits', label: 'Term Deposits', icon: PiggyBank },
+      { to: '/deposits', label: 'Deposits', icon: PiggyBank },
+      { to: '/products', label: 'Products & Fees', icon: Package },
     ],
   },
   {
@@ -47,6 +49,7 @@ export const NAV_GROUPS = [
     items: [
       { to: '/compliance', label: 'KYC / AML', icon: ShieldCheck },
       { to: '/risk', label: 'Risk & Fraud', icon: ShieldAlert },
+      { to: '/regulatory', label: 'Regulatory Reports', icon: FileWarning },
     ],
   },
   {

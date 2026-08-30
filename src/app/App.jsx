@@ -22,6 +22,8 @@ import { LoanDetailPage } from '../features/loans/LoanDetailPage.jsx';
 import { DepositsListPage } from '../features/deposits/DepositsListPage.jsx';
 import { BookDepositPage } from '../features/deposits/BookDepositPage.jsx';
 import { CompliancePage } from '../features/compliance/CompliancePage.jsx';
+import { RegulatoryPage } from '../features/regulatory/RegulatoryPage.jsx';
+import { ProductsPage } from '../features/products/ProductsPage.jsx';
 import { BranchesListPage } from '../features/branches/BranchesListPage.jsx';
 import { CardsPage } from '../features/cards/CardsPage.jsx';
 import { TransactionsPage } from '../features/transactions/TransactionsPage.jsx';
@@ -103,7 +105,9 @@ function AppRoutes() {
               <Route path="loans/:id" element={<LoanDetailPage />} />
               <Route path="deposits" element={<DepositsListPage />} />
               <Route path="deposits/new" element={<BookDepositPage />} />
+              <Route path="products" element={<ProductsPage />} />
               <Route path="compliance" element={<CompliancePage />} />
+              <Route path="regulatory" element={<RegulatoryPage />} />
               <Route path="risk" element={<RiskAlertsPage />} />
               <Route path="branches" element={<BranchesListPage />} />
               <Route path="admin/users" element={<UsersRolesPage />} />

@@ -121,6 +121,43 @@ export const LoanApi = {
   remove: (id) => api.del(`/loans/${id}`),
 };
 
+// Term & recurring deposits (real backend — internal/deposit).
+export const DepositApi = {
+  list: (params) => api.get('/deposits', { params }),
+  get: (id) => api.get(`/deposits/${id}`),
+  open: (payload) => api.post('/deposits', payload),
+  byCustomer: (customerId) => api.get(`/deposits/customer/${customerId}`),
+  break: (id) => api.post(`/deposits/${id}/break`, {}),
+  runAccrual: () => api.post('/deposits/run/accrual', {}),
+  runMaturity: () => api.post('/deposits/run/maturity', {}),
+};
+
+// Product / interest / fee engine (internal/product).
+export const ProductApi = {
+  list: () => api.get('/products'),
+  get: (id) => api.get(`/products/${id}`),
+  create: (payload) => api.post('/products', payload),
+  addFee: (id, payload) => api.post(`/products/${id}/fees`, payload),
+  removeFee: (id, feeId) => api.del(`/products/${id}/fees/${feeId}`),
+  runFees: () => api.post('/products/run/fees', {}),
+};
+
+// Regulatory & compliance reporting (internal/regulatory).
+export const RegulatoryApi = {
+  reports: (params) => api.get('/regulatory/reports', { params }),
+  decide: (id, status) => api.post(`/regulatory/reports/${id}/decide`, { status }),
+  generateCTR: (params) => api.post('/regulatory/ctr/generate', {}, { params }),
+  detectStructuring: (params) => api.post('/regulatory/structuring/detect', {}, { params }),
+  generateSAR: () => api.post('/regulatory/sar/generate', {}),
+  dormancySweep: (params) => api.post('/regulatory/dormancy/sweep', {}, { params }),
+};
+
+// Overdraft config lives on the account.
+export const OverdraftApi = {
+  set: (accountId, overdraft_limit, overdraft_rate) =>
+    api.put(`/accounts/${accountId}/overdraft`, { overdraft_limit, overdraft_rate }),
+};
+
 export const BeneficiaryApi = {
   list: (ownerCustomerId, params) => api.get('/beneficiaries', { params: { owner_customer_id: ownerCustomerId, ...params } }),
   get: (id) => api.get(`/beneficiaries/${id}`),

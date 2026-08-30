@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Wallet, Receipt, CreditCard, Banknote, Snowflake, Power, ArrowDownLeft, ArrowUpRight, User, FileText, Gauge, Pencil, Users, Trash2 } from 'lucide-react';
-import { AccountApi, TransactionApi, CustomerApi } from '../../lib/api/index.js';
+import { AccountApi, TransactionApi, CustomerApi, OverdraftApi } from '../../lib/api/index.js';
 import { useAsync } from '../../lib/useAsync.js';
 import { Card, CardHeader, Tabs, StatusPill, Badge, Button, DataTable, Spinner, Modal, Field, Input, useToast, useConfirm } from '../../components/ui/index.js';
 import { useAuth } from '../../lib/auth/AuthContext.jsx';
@@ -172,7 +172,12 @@ export function AccountDetailPage() {
 
       {tab === 'holders' && <AccountHolders accountId={id} />}
 
-      {tab === 'limits' && <WithdrawalLimits accountId={id} currency={a.currency} />}
+      {tab === 'limits' && (
+        <div className="space-y-4">
+          <WithdrawalLimits accountId={id} currency={a.currency} />
+          <OverdraftConfig account={a} onSaved={() => account.reload()} />
+        </div>
+      )}
 
       {tab === 'details' && (
         <Card>
@@ -356,6 +361,50 @@ function AccountHolders({ accountId }) {
             </select>
           </div>
         </div>
+      </div>
+    </Card>
+  );
+}
+
+// OverdraftConfig lets an officer set the account's overdraft facility (limit + rate).
+function OverdraftConfig({ account, onSaved }) {
+  const { can } = useAuth();
+  const toast = useToast();
+  const editable = can('update_account');
+  const [limit, setLimit] = useState(String(account.overdraft_limit ?? '0'));
+  const [rate, setRate] = useState(String(account.overdraft_rate ?? '0'));
+  const [busy, setBusy] = useState(false);
+  const dirty = limit !== String(account.overdraft_limit ?? '0') || rate !== String(account.overdraft_rate ?? '0');
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      await OverdraftApi.set(account.account_id, String(parseFloat(limit) || 0), String(parseFloat(rate) || 0));
+      toast.success('Overdraft facility updated');
+      onSaved?.();
+    } catch (err) { toast.error(err?.message || 'Could not update overdraft'); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <Card>
+      <CardHeader title="Overdraft facility" icon={Gauge} subtitle="Allow the balance to go negative up to a limit; interest accrues daily on the overdrawn amount" />
+      <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+        <Field label={`Overdraft limit (${account.currency})`}>
+          <Input value={limit} onChange={(e) => setLimit(e.target.value.replace(/[^0-9.]/g, ''))} disabled={!editable} mono inputMode="decimal" />
+        </Field>
+        <Field label="Overdraft rate (% p.a.)">
+          <Input value={rate} onChange={(e) => setRate(e.target.value.replace(/[^0-9.]/g, ''))} disabled={!editable} mono inputMode="decimal" />
+        </Field>
+        {editable && (
+          <div className="flex justify-end">
+            <Button loading={busy} disabled={!dirty} onClick={save}>Save overdraft</Button>
+          </div>
+        )}
+      </div>
+      <div className="px-4 pb-4 text-2xs text-slate-400">
+        Current available: {formatMoney(Number(account.balance) + Number(account.overdraft_limit || 0), account.currency)}
+        {' '}(balance {formatMoney(account.balance, account.currency)} + limit {formatMoney(account.overdraft_limit || 0, account.currency)}).
       </div>
     </Card>
   );
