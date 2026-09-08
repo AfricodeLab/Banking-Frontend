@@ -5,11 +5,11 @@ import { ToastProvider, ConfirmProvider } from '../components/ui/index.js';
 import { AppShell } from '../components/layout/AppShell.jsx';
 import { RequireAuth } from './RequireAuth.jsx';
 import { PermGuard } from './PermGuard.jsx';
+import { HomeRedirect } from './HomeRedirect.jsx';
 import { CustomerPortal } from '../features/portal/CustomerPortal.jsx';
 import { ForcedMFAGate } from '../features/settings/ForcedMFAGate.jsx';
 
 import { LoginPage } from '../features/auth/LoginPage.jsx';
-import { DashboardPage } from '../features/dashboard/DashboardPage.jsx';
 import { CustomerListPage } from '../features/customers/CustomerListPage.jsx';
 import { CustomerCreatePage } from '../features/customers/CustomerCreatePage.jsx';
 import { CustomerDetailPage } from '../features/customers/CustomerDetailPage.jsx';
@@ -86,7 +86,7 @@ function AppRoutes() {
 
       <Route element={<RequireAuth><AppShell /></RequireAuth>}>
         <Route element={<PermGuard />}>
-              <Route index element={<DashboardPage />} />
+              <Route index element={<HomeRedirect />} />
               <Route path="customers" element={<CustomerListPage />} />
               <Route path="customers/new" element={<CustomerCreatePage />} />
               <Route path="customers/:id/edit" element={<CustomerCreatePage />} />

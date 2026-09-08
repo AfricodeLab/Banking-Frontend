@@ -13,7 +13,9 @@ export const NAV_GROUPS = [
   {
     label: 'Overview',
     items: [
-      { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
+      // Management command-centre (bank-wide KPIs) — oversight roles only. Front-line
+      // roles land on their primary workspace instead (see HomeRedirect).
+      { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true, permission: 'view_dashboard' },
     ],
   },
   {

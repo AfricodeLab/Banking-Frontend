@@ -9,7 +9,7 @@ export const MODULE_PERMS = {
   cards: 'read_card',
   teller: 'process_transaction',
   'cash-drawer': 'process_transaction',
-  payments: 'create_transaction',
+  payments: 'make_payment',
   transactions: 'read_transaction',
   approvals: 'approve_transaction',
   rails: 'admin',
@@ -33,4 +33,16 @@ export const MODULE_PERMS = {
 export function permForPath(pathname) {
   const seg = String(pathname || '').replace(/^\/+/, '').split('/')[0] || '';
   return MODULE_PERMS[seg] || null;
+}
+
+// Ordered fallback landing modules for roles that can't open the management dashboard.
+// The first module the user is allowed to open becomes their home — so a teller lands on
+// the till, a loan officer on Loans, a treasury officer on FX, a CSR on Customers.
+export const LANDING_PRIORITY = ['/teller', '/loans', '/fx', '/compliance', '/customers', '/accounts', '/reports', '/audit'];
+
+// Where a user should land at "/". Dashboard for oversight roles that hold view_dashboard;
+// otherwise their highest-priority accessible module. `can` is the AuthContext predicate.
+export function landingPathFor(can) {
+  if (can('view_dashboard')) return null; // null → render the dashboard in place
+  return LANDING_PRIORITY.find((p) => can(permForPath(p))) || '/customers';
 }
