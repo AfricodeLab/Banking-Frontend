@@ -4,12 +4,15 @@ import { Landmark, ChevronsLeft } from 'lucide-react';
 import { cn } from '../../lib/cn.js';
 import { NAV_GROUPS } from '../../app/nav.js';
 import { useAuth } from '../../lib/auth/AuthContext.jsx';
+import { permForPath } from '../../lib/auth/access.js';
 
 export function Sidebar({ collapsed, onToggle }) {
   const { can } = useAuth();
   // Hide nav items the user lacks permission for, then drop any now-empty groups.
+  // Each item's required permission is resolved from its route (single source of truth
+  // in access.js), with an explicit `it.permission` override honoured if present.
   const groups = NAV_GROUPS
-    .map((g) => ({ ...g, items: g.items.filter((it) => !it.permission || can(it.permission)) }))
+    .map((g) => ({ ...g, items: g.items.filter((it) => can(it.permission ?? permForPath(it.to))) }))
     .filter((g) => g.items.length > 0);
   return (
     <aside

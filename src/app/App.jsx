@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from '../lib/auth/AuthContext.jsx';
 import { ToastProvider, ConfirmProvider } from '../components/ui/index.js';
 import { AppShell } from '../components/layout/AppShell.jsx';
 import { RequireAuth } from './RequireAuth.jsx';
+import { PermGuard } from './PermGuard.jsx';
 import { CustomerPortal } from '../features/portal/CustomerPortal.jsx';
 import { ForcedMFAGate } from '../features/settings/ForcedMFAGate.jsx';
 
@@ -84,6 +85,7 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
 
       <Route element={<RequireAuth><AppShell /></RequireAuth>}>
+        <Route element={<PermGuard />}>
               <Route index element={<DashboardPage />} />
               <Route path="customers" element={<CustomerListPage />} />
               <Route path="customers/new" element={<CustomerCreatePage />} />
@@ -115,7 +117,8 @@ function AppRoutes() {
               <Route path="settings/security" element={<SecuritySettingsPage />} />
               <Route path="audit" element={<AuditPage />} />
               <Route path="reports" element={<ReportsPage />} />
-        <Route path="*" element={<NotFoundPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+        </Route>
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

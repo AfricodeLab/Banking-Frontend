@@ -6,6 +6,8 @@ import { CustomerApi } from '../../lib/api/index.js';
 import { NAV_INDEX } from '../../app/nav.js';
 import { initials } from '../../lib/format.js';
 import { cn } from '../../lib/cn.js';
+import { useAuth } from '../../lib/auth/AuthContext.jsx';
+import { permForPath } from '../../lib/auth/access.js';
 
 /**
  * Global command palette — the spine of the console.
@@ -19,6 +21,7 @@ export function CommandBar({ open, onClose }) {
   const [active, setActive] = useState(0);
   const inputRef = useRef(null);
   const navigate = useNavigate();
+  const { can } = useAuth();
 
   useEffect(() => {
     if (open) {
@@ -48,8 +51,11 @@ export function CommandBar({ open, onClose }) {
 
   const pages = useMemo(() => {
     const term = q.trim().toLowerCase();
-    return NAV_INDEX.filter((n) => !term || n.label.toLowerCase().includes(term)).slice(0, 6);
-  }, [q]);
+    return NAV_INDEX
+      .filter((n) => can(n.permission ?? permForPath(n.to)))
+      .filter((n) => !term || n.label.toLowerCase().includes(term))
+      .slice(0, 6);
+  }, [q, can]);
 
   const results = useMemo(() => [
     ...customers.map((c) => ({ type: 'customer', id: c.customer_id, title: c.name, sub: c.email || c.phone || c.customer_id, to: `/customers/${c.customer_id}` })),
